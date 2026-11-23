@@ -56,12 +56,17 @@ const extra = [
 const screen=document.getElementById('view');
 const key='clave-169-introduccion-v1';
 let history=[];
+let mastered={};
+try { mastered=JSON.parse(localStorage.getItem(key+'-repaso'))||{}; } catch {}
 try { history=JSON.parse(localStorage.getItem(key))||[]; } catch {}
 const cardsIntro=[
  ['¿Qué es la Constitución y para qué sirve?','Es la norma principal de España. Dice cómo se organiza el Estado, qué derechos tenemos y qué reglas deben respetar las demás leyes.'],
  ['¿Qué es el Preámbulo?','Es la introducción. Va antes del artículo 1 y explica qué se quiere conseguir, como convivir en democracia y proteger los derechos de las personas.'],
  ['¿Qué pasó en 1978?','31 de octubre · Las Cortes aprobaron el texto.\n6 de diciembre · El pueblo español lo ratificó, es decir, lo confirmó con su voto.\n27 de diciembre · El Rey lo sancionó, es decir, lo formalizó con su firma.\n29 de diciembre · Se publicó en el BOE.'],
  ['¿Cómo se organiza?','Tiene un Preámbulo, 11 títulos contando el Preliminar y 169 artículos. Un título agrupa un tema. Un artículo es un apartado numerado. Al final hay disposiciones, que son reglas adicionales o de cierre.'],
+ ['¿Qué son las Cortes y qué es un referéndum?','Las Cortes Generales son el Congreso y el Senado. Un referéndum es una votación en la que se pregunta a la ciudadanía si está de acuerdo con algo. En 1978 se preguntó si aceptaba la Constitución.'],
+ ['¿Qué significa soberanía nacional?','Piensa en quién tiene la autoridad de la que salen los poderes del Estado. Según el artículo 1.2, es el pueblo español. En el examen te lo pueden preguntar así: ¿En quién reside la soberanía nacional?'],
+ ['¿Qué significa monarquía parlamentaria?','Hay un rey como jefe del Estado y las Cortes Generales hacen las leyes y controlan al Gobierno. Monarquía parlamentaria es la expresión que usa el artículo 1.3.'],
  ['¿Qué dicen los artículos 1 y 2?','El poder del Estado viene del pueblo español. España es una monarquía parlamentaria. El artículo 2 habla de la unidad de España y de la autonomía y solidaridad de sus nacionalidades y regiones.']
 ];
 const easyPreamble=[
@@ -107,8 +112,10 @@ function home(){
  render('<h1>La Constitución desde cero</h1><p>Introducción · Preámbulo, fechas, estructura y primeros artículos.</p>'+
  button('Estudiar','study()',true)+button('Tests','modes()')+button('Mi progreso','progressPage()')+button('Mis fallos','review()'));
 }
+const titles=['Principios generales del Estado','Derechos y deberes fundamentales','La Corona','Las Cortes Generales','Gobierno y Administración','Relaciones entre Gobierno y Cortes','Poder Judicial','Economía y Hacienda','Organización territorial','Tribunal Constitucional','Reforma constitucional'];
 function study(){
  render(back+'<h1>Estudiar</h1>'+cardsIntro.map(([title,body])=>'<details class="panel"><summary>'+title+'</summary><p style="white-space:pre-line">'+body+'</p></details>').join('')+
+ '<details class="panel"><summary>Mapa de los 11 títulos</summary><ul>'+titles.map((title,i)=>'<li><strong>'+(['Preliminar','I','II','III','IV','V','VI','VII','VIII','IX','X'][i])+'</strong> · '+title+'</li>').join('')+'</ul></details>'+
  '<p><a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229#preambulo" target="_blank" rel="noopener">Ver el texto oficial</a></p>'+button('Pasar a los tests','modes()',true));
 }
 function modes(){
@@ -156,14 +163,17 @@ function finish(){
  const blanks=answers.filter(a=>a===null).length;
  const misses=test.length-hits-blanks;
  const ascends=mode==='normal'&&hits>=18&&!history.some(item=>item.mode==='normal'&&item.hits>=18);
- if(mode!=='review'){
+ if(mode==='review'){
+  for(const q of results){if(q.answer===q.right)mastered[q.id]=history[0]?.date;}
+  try {localStorage.setItem(key+'-repaso',JSON.stringify(mastered));} catch {}
+ } else {
   history.unshift({date:new Date().toISOString(),mode,hits,blanks,misses,results});
   try {localStorage.setItem(key,JSON.stringify(history));} catch {}
  }
  render(back+'<h1>Resultado</h1><div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div><p>'+hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco</p>'+
  (ascends?'<div class="panel"><strong>¡Subes al nivel 2!</strong></div>':'')+
  results.map(q=>'<details class="panel" '+(q.answer!==q.right?'open':'')+'><summary>'+(q.answer===q.right?'Acierto':q.answer===null?'En blanco':'Fallo')+' · '+q.prompt+'</summary><p>Tu respuesta · '+(q.answer??'En blanco')+'<br>Correcta · '+q.right+'</p><small>'+q.note+'</small></details>').join('')+
- button('Volver a los tests','modes()',true));
+ (mode==='review'?button('Volver a mis fallos','review()',true):button('Volver a los tests','modes()',true)));
 }
 function progressPage(){
  const total=field=>history.reduce((sum,item)=>sum+item[field],0);
@@ -171,18 +181,22 @@ function progressPage(){
  (history.length?history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(item.mode==='easy'?'Fácil':'Normal')+' · '+item.hits+'/20</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join(''):'<p>Tu primer test aparecerá aquí cuando lo entregues.</p>')+
  '<small>El progreso se guarda en este navegador.</small>');
 }
-function review(){
+function pendingMistakes(){
  const latest=new Map();
- history.forEach(item=>item.results.forEach(q=>{if(!latest.has(q.id))latest.set(q.id,q);}));
- const failed=[...latest.values()].filter(q=>q.answer!==null&&q.answer!==q.right);
- render(back+'<h1>Mis fallos</h1><p>'+failed.length+' preguntas por repasar.</p>'+
+ history.forEach(item=>item.results.forEach(q=>{
+  if(!latest.has(q.id)&&q.answer!==null)latest.set(q.id,{...q,date:item.date});
+ }));
+ return [...latest.values()].filter(q=>q.answer!==q.right&&!(mastered[q.id]>=q.date));
+}
+function review(){
+ const failed=pendingMistakes();
+ render(back+'<h1>Mis fallos</h1><p>'+failed.length+(failed.length===1?' pregunta por repasar.':' preguntas por repasar.')+'</p>'+
  (failed.length?button('Practicar mis fallos','startReview()',true):'')+
  failed.map(q=>'<details class="panel"><summary>'+q.prompt+'</summary><p>'+q.right+'</p><small>'+q.note+'</small></details>').join(''));
 }
 function startReview(){
- const latest=new Map();
- history.forEach(item=>item.results.forEach(q=>{if(!latest.has(q.id))latest.set(q.id,q);}));
- const failed=pool.filter(q=>latest.has(q.id)&&latest.get(q.id).answer!==null&&latest.get(q.id).answer!==q.right);
+ const ids=new Set(pendingMistakes().map(q=>q.id));
+ const failed=pool.filter(q=>ids.has(q.id));
  if(failed.length){mode='review';begin(shuffle(failed).slice(0,20));}
 }
 home();
