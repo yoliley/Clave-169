@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLAVE 169</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fff;color:#173653;font:16px/1.55 system-ui,sans-serif}main,header,footer{max-width:480px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c3deef}main{min-height:65vh;background:radial-gradient(ellipse at 80% 0%,#e2f4ff,transparent 65%)}h1,h2{font:500 2rem/1.12 Georgia;margin:12px 0}h1{font-size:clamp(2rem,9vw,3.3rem)}p,small,footer{color:#45627b}small{display:block}button,summary{cursor:pointer}button{font:inherit;color:inherit;display:block;width:100%;min-height:48px;border-radius:13px;padding:10px 14px;margin:8px 0;border:1px solid #a9d3ee;background:#f0f9ff;text-align:left}button.primary{background:#aedfff;color:#173653;font-weight:750;text-align:center}button.back{width:auto;background:transparent}button:disabled{opacity:.55;cursor:default}button[aria-pressed=true]{border-color:#aedfff;background:#d0ecff}button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #aedfff;outline-offset:3px}.panel{background:#f4faff;border:1px solid #c3deef;border-radius:16px;padding:15px;margin:10px 0}.tag,a,.score{color:#aedfff}.tag,a,.score{color:#175b8a}.tag{font-weight:700}button[aria-pressed=true]{border-color:#2272a7}.hero{padding:16px 0}.route{padding:8px 0}.route+.route{border-top:1px solid #c3deef}.score{font:3rem Georgia}progress{width:100%;accent-color:#aedfff}.feedback{border-left:4px solid #aedfff}summary{font-weight:700}
+</style>
+<header><strong>CLAVE 169</strong><span class="tag" id="level"></span></header>
+<main id="view"></main>
+<footer><a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229" target="_blank" rel="noopener">Consultar la Constitución en el BOE</a></footer>
+<script>
+const cards = [
+  ['Convivencia democrática','Garantizar la convivencia conforme a la Constitución y las leyes, en un orden económico y social justo.'],
+  ['Estado de Derecho','Consolidar un Estado de Derecho donde impere la ley como expresión de la voluntad popular.'],
+  ['Derechos y diversidad','Proteger a los españoles y a los pueblos de España en el ejercicio de los derechos humanos y en sus culturas, tradiciones, lenguas e instituciones.'],
+  ['Progreso y calidad de vida','Impulsar la cultura y la economía para asegurar una calidad de vida digna para todos.'],
+  ['Democracia avanzada','Establecer una sociedad democrática avanzada.'],
+  ['Paz y cooperación','Fortalecer las relaciones pacíficas y la cooperación eficaz entre todos los pueblos de la Tierra.']
+];
+const bank = [
+  ['¿Qué enmarca la convivencia democrática?', 'La Constitución y las leyes', ['Los tratados y las costumbres','Los reglamentos y las sentencias','Los estatutos y los decretos'],0],
+  ['¿Cómo debe ser el orden económico y social ligado a la convivencia?', 'Justo', ['Uniforme','Centralizado','Inmutable'],0],
+  ['¿De qué es expresión la ley en el objetivo sobre el Estado de Derecho?', 'De la voluntad popular', ['De la voluntad del Gobierno','De la voluntad de los jueces','De la voluntad de la Corona'],1],
+  ['¿Qué se quiere consolidar mediante el imperio de la ley?', 'Un Estado de Derecho', ['Un sistema electoral','Un modelo territorial','Un sistema de tratados'],1],
+  ['¿A quién se refiere el objetivo de protección de derechos humanos, culturas y lenguas?', 'A todos los españoles y pueblos de España', ['Solo a las instituciones del Estado','Solo a las comunidades autónomas','Solo a los representantes públicos'],2],
+  ['¿Qué ámbitos se quieren impulsar para mejorar la calidad de vida?', 'La cultura y la economía', ['La justicia y la seguridad','La defensa y la diplomacia','La administración y la justicia'],3],
+  ['¿Qué persigue el progreso de la cultura y de la economía?', 'Una calidad de vida digna para todos', ['Una cultura idéntica en todo el país','Una regulación común del comercio exterior','Una administración más centralizada'],3],
+  ['¿Cómo se describe la sociedad democrática que se quiere establecer?', 'Avanzada', ['Federal','Centralizada','Directa'],4],
+  ['¿Entre quiénes se busca reforzar la paz y la cooperación?', 'Entre todos los pueblos de la Tierra', ['Entre los municipios españoles','Entre las instituciones europeas','Entre las cámaras legislativas'],5],
+  ['¿Qué tipo de cooperación se pretende fortalecer entre los pueblos?', 'Eficaz', ['Exclusivamente económica','Exclusivamente militar','Limitada a los países vecinos'],5]
+];
+const extra = [
+['¿En qué fecha aprobaron las Cortes la Constitución?','El texto constitucional fue aprobado en sesiones plenarias de Congreso y Senado. ¿Cuándo?','31 de octubre de 1978',['6 de diciembre de 1978','27 de diciembre de 1978','29 de diciembre de 1978'],'Aprobación por las Cortes · 31 de octubre de 1978.','Estructura'],
+['¿Cuándo se ratificó la Constitución en referéndum?','¿En qué fecha se celebró el referéndum constitucional de 1978?','6 de diciembre de 1978',['31 de octubre de 1978','27 de diciembre de 1978','29 de diciembre de 1978'],'Ratificación por el pueblo español · 6 de diciembre de 1978.','Estructura'],
+['¿Cuándo sancionó el Rey la Constitución?','Indique la fecha de sanción de la Constitución Española.','27 de diciembre de 1978',['31 de octubre de 1978','6 de diciembre de 1978','29 de diciembre de 1978'],'Sanción real · 27 de diciembre de 1978.','Estructura'],
+['¿Cuándo se publicó la Constitución en el BOE?','¿Qué fecha lleva el BOE núm. 311 en el que se publicó la Constitución?','29 de diciembre de 1978',['31 de octubre de 1978','6 de diciembre de 1978','27 de diciembre de 1978'],'Publicación en el BOE · 29 de diciembre de 1978.','Estructura'],
+['¿Cuántos artículos tiene la Constitución?','¿Cuál es el número del último artículo de la Constitución?','169',['167','168','170'],'El articulado termina en el artículo 169.','Estructura'],
+['¿Cuántos títulos hay contando el Título Preliminar?','¿Cuántos títulos forman la serie del Preliminar al X, ambos incluidos?','11',['9','10','12'],'Hay un Título Preliminar y diez títulos numerados.','Estructura'],
+['¿Cuántas disposiciones adicionales contiene la Constitución?','Señale el número de disposiciones adicionales del texto constitucional.','Cuatro',['Tres','Cinco','Nueve'],'El texto contiene cuatro disposiciones adicionales.','Estructura'],
+['¿Cuántas disposiciones transitorias contiene la Constitución?','Señale el número de disposiciones transitorias del texto constitucional.','Nueve',['Cuatro','Ocho','Diez'],'El texto contiene nueve disposiciones transitorias.','Estructura'],
+['¿Qué materia regula el Título II?','Al buscar el Título II en el índice, ¿qué encabezado encontrarás?','La Corona',['Los derechos y deberes fundamentales','Las Cortes Generales','El Gobierno y la Administración'],'El Título II se dedica a la Corona.','Estructura'],
+['¿Qué materia regula el Título X?','¿A qué se dedica el último título numerado?','La reforma constitucional',['El Tribunal Constitucional','El Poder Judicial','La organización territorial del Estado'],'El Título X regula la reforma constitucional.','Estructura'],
+['¿Quién aprobó y quién ratificó la Constitución, respectivamente?','Complete la secuencia del Preámbulo. ¿Quiénes aprueban y quién ratifica?','Las Cortes y el pueblo español',['El Rey y las Cortes','El Gobierno y el Senado','El pueblo español y las Cortes'],'Las Cortes aprueban y el pueblo español ratifica.','Preámbulo'],
+['¿Cómo se define España en el artículo 1.1?','Señale la fórmula constitucional que describe el Estado español en el artículo 1.1.','Estado social y democrático de Derecho',['Estado democrático y federal de Derecho','Estado social y parlamentario de Derecho','Estado liberal y democrático de Derecho'],'El artículo 1.1 reúne los elementos social, democrático y de Derecho.','Art. 1.1'],
+['¿Cuál de los siguientes NO es un valor superior enumerado en el artículo 1.1?','¿Qué término sobra al reconstruir la lista de valores superiores del artículo 1.1?','La seguridad',['La libertad','La justicia','La igualdad'],'La lista incluye libertad, justicia, igualdad y pluralismo político.','Art. 1.1'],
+['¿Qué tipo de pluralismo figura entre los valores superiores?','Complete el último valor superior enumerado en el artículo 1.1. Pluralismo…','Político',['Territorial','Sindical','Ideológico'],'El artículo 1.1 enumera el pluralismo político.','Art. 1.1'],
+['¿En quién reside la soberanía nacional?','Según el artículo 1.2, ¿quién es titular de la soberanía nacional?','El pueblo español',['Las Cortes Generales','El Rey','El Gobierno'],'La soberanía nacional reside en el pueblo español.','Art. 1.2'],
+['¿Qué emana del pueblo español según el artículo 1.2?','Identifique lo que la Constitución dice que dimana del titular de la soberanía nacional.','Los poderes del Estado',['Solo el Poder Legislativo','Solo el Poder Ejecutivo','Solo el Poder Judicial'],'El artículo 1.2 se refiere al conjunto de los poderes del Estado.','Art. 1.2'],
+['¿Cuál es la forma política del Estado español?','¿Qué fórmula utiliza el artículo 1.3 para la forma política del Estado?','Monarquía parlamentaria',['Monarquía absoluta','República parlamentaria','Monarquía federal'],'El artículo 1.3 establece la monarquía parlamentaria.','Art. 1.3'],
+['¿En qué se fundamenta la Constitución según el artículo 2?','¿Qué principio enuncia el comienzo del artículo 2?','En la indisoluble unidad de la Nación española',['En la soberanía de cada comunidad autónoma','En la unión voluntaria de estados soberanos','En la autonomía de las provincias exclusivamente'],'El artículo 2 parte de la indisoluble unidad de la Nación española.','Art. 2'],
+['¿De quién reconoce la Constitución el derecho a la autonomía en el artículo 2?','Indique los titulares del derecho a la autonomía que menciona el artículo 2.','De las nacionalidades y regiones que integran la Nación española',['De las provincias exclusivamente','De los municipios exclusivamente','De todas las instituciones públicas'],'El artículo 2 menciona a las nacionalidades y regiones.','Art. 2'],
+['Además de la autonomía, ¿qué garantiza el artículo 2 entre nacionalidades y regiones?','Complete el sentido de la última parte del artículo 2. La autonomía se acompaña de…','La solidaridad entre todas ellas',['La soberanía de cada una','La independencia de cada una','La preferencia de unas sobre otras'],'El artículo 2 vincula la autonomía con la solidaridad entre nacionalidades y regiones.','Art. 2']
+];
+
+const screen=document.getElementById('view');
+const key='clave-169-introduccion-v1';
+let history=[];
+try { history=JSON.parse(localStorage.getItem(key))||[]; } catch {}
+const cardsIntro=[
+ ['¿Qué es la Constitución y para qué sirve?','Es la norma principal de España. Dice cómo se organiza el Estado, qué derechos tenemos y qué reglas deben respetar las demás leyes.'],
+ ['¿Qué es el Preámbulo?','Es la introducción. Va antes del artículo 1 y explica qué se quiere conseguir, como convivir en democracia y proteger los derechos de las personas.'],
+ ['¿Qué pasó en 1978?','31 de octubre · Las Cortes aprobaron el texto.\n6 de diciembre · El pueblo español lo ratificó, es decir, lo confirmó con su voto.\n27 de diciembre · El Rey lo sancionó, es decir, lo formalizó con su firma.\n29 de diciembre · Se publicó en el BOE.'],
+ ['¿Cómo se organiza?','Tiene un Preámbulo, 11 títulos contando el Preliminar y 169 artículos. Un título agrupa un tema. Un artículo es un apartado numerado. Al final hay disposiciones, que son reglas adicionales o de cierre.'],
+ ['¿Qué dicen los artículos 1 y 2?','El poder del Estado viene del pueblo español. España es una monarquía parlamentaria. El artículo 2 habla de la unidad de España y de la autonomía y solidaridad de sus nacionalidades y regiones.']
+];
+const easyPreamble=[
+ '¿Qué reglas nos ayudan a convivir en democracia?','¿Cómo debe ser el sistema económico y social para convivir bien?',
+ '¿De quién expresa la voluntad la ley según el Preámbulo?','¿Qué tipo de Estado se quiere reforzar para que se respete la ley?',
+ '¿A quién quiere proteger el Preámbulo en sus derechos, lenguas y culturas?','¿Qué dos cosas se quieren impulsar para que vivamos mejor?',
+ '¿Para qué se quiere impulsar la cultura y la economía?','¿Qué tipo de sociedad democrática se quiere construir?',
+ '¿Entre quiénes se busca que haya más paz y colaboración?','¿Cómo debe funcionar la cooperación entre pueblos?'
+];
+const easyExtra=[
+ '¿Qué día dieron el visto bueno las Cortes al texto?','¿Qué día votó la gente en el referéndum?',
+ '¿Qué día formalizó el Rey la Constitución con su firma?','¿Qué día salió publicada en el BOE?',
+ '¿Cuántos apartados numerados tiene la Constitución?','Si cuentas el Título Preliminar, ¿cuántos títulos hay?',
+ '¿Cuántas disposiciones adicionales hay al final?','¿Cuántas disposiciones transitorias hay?',
+ '¿De qué habla el Título II?','¿Qué explica el último título, el X?',
+ '¿Quién dio el visto bueno al texto y quién lo confirmó con su voto?','¿Cómo describe España el artículo 1.1?',
+ '¿Qué palabra sobra en la lista de valores del artículo 1.1?','El artículo 1.1 habla de pluralismo. ¿De qué tipo?',
+ '¿De quién viene el poder del Estado?','¿Qué nace del pueblo español, según el artículo 1?',
+ '¿Qué forma política tiene España?','¿En qué idea empieza apoyándose el artículo 2?',
+ '¿A quién reconoce el artículo 2 el derecho a la autonomía?','Además de la autonomía, ¿qué se quiere garantizar entre nacionalidades y regiones?'
+];
+const pool=[
+ ...bank.map(([prompt,right,wrong,topic],i)=>({id:i,prompts:[easyPreamble[i],prompt],right,wrong,note:'Preámbulo · '+cards[topic][1]})),
+ ...extra.map(([a,b,right,wrong,note,source],i)=>({id:bank.length+i,prompts:[easyExtra[i],a,b],right,wrong,note:source+' · '+note}))
+];
+let test=[],answers=[],cursor=0,mode='',checked=false,previous={};
+function shuffle(items){
+ const copy=[...items];
+ for(let i=copy.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [copy[i],copy[j]]=[copy[j],copy[i]];
+ }
+ return copy;
+}
+function button(label,action,primary=false){return '<button class="'+(primary?'primary':'')+'" onclick="'+action+'">'+label+'</button>';}
+const back=button('Volver al inicio','home()');
+function render(html){
+ screen.innerHTML=html;
+ document.getElementById('level').textContent=history.some(item=>item.mode==='normal'&&item.hits>=18)?'Nivel 2':'Nivel 1';
+ window.scrollTo(0,0);
+}
+function home(){
+ render('<h1>La Constitución desde cero</h1><p>Introducción · Preámbulo, fechas, estructura y primeros artículos.</p>'+
+ button('Estudiar','study()',true)+button('Tests','modes()')+button('Mi progreso','progressPage()')+button('Mis fallos','review()'));
+}
+function study(){
+ render(back+'<h1>Estudiar</h1>'+cardsIntro.map(([title,body])=>'<details class="panel"><summary>'+title+'</summary><p style="white-space:pre-line">'+body+'</p></details>').join('')+
+ '<p><a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229#preambulo" target="_blank" rel="noopener">Ver el texto oficial</a></p>'+button('Pasar a los tests','modes()',true));
+}
+function modes(){
+ render(back+'<h1>Tests</h1><p>Introducción a la Constitución · 20 preguntas por intento</p>'+
+ button('Fácil · Corrección al responder',"start('easy')",true)+button('Normal · Corrección al entregar',"start('normal')")+
+ '<div class="panel"><strong>Difícil · Exámenes oficiales</strong><small>Pendiente de incorporar las preguntas oficiales.</small></div>');
+}
+function start(kind){
+ mode=kind;
+ let selection=shuffle(pool).slice(0,20);
+ if(previous[kind]&&selection.every(q=>previous[kind].includes(q.id)))selection[0]=shuffle(pool.filter(q=>!previous[kind].includes(q.id)))[0];
+ previous[kind]=selection.map(q=>q.id);
+ begin(selection);
+}
+function begin(selection){
+ test=selection.map(q=>({...q,prompt:mode==='normal'?shuffle(q.prompts.slice(1))[0]:shuffle(q.prompts.slice(0,2))[0],options:shuffle([q.right,...q.wrong])}));
+ answers=Array(test.length).fill(null);cursor=0;checked=false;question();
+}
+function question(){
+ const q=test[cursor];
+ const instant=mode!=='normal';
+ const selected=answers[cursor];
+ render(button('Salir del test',"if(confirm('¿Salir de este intento?'))home()")+
+ '<small>Pregunta '+(cursor+1)+' de '+test.length+' · '+answers.filter(a=>a!==null).length+' respondidas</small>'+
+ '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+q.prompt+'</h2>'+
+ q.options.map((option,i)=>'<button aria-pressed="'+(option===selected)+'" '+(checked?'disabled':'')+' onclick="selectAnswer('+i+')">'+option+'</button>').join('')+
+ (checked?'<div class="panel feedback" role="status"><strong>'+(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong><p>'+q.note+'</p></div>':'')+
+ (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
+ (instant&&!checked?button('Dejar en blanco','skip()'):'')+
+ (!instant&&selected!==null?button('Quitar respuesta','clearAnswer()'):'')+
+ (!instant&&cursor>0?button('Anterior','move(-1)'):'')+
+ (!instant||checked?button(cursor===test.length-1?'Entregar test':'Siguiente','move(1)',true):''));
+}
+function selectAnswer(i){answers[cursor]=test[cursor].options[i];question();}
+function clearAnswer(){answers[cursor]=null;question();}
+function check(){checked=true;question();}
+function skip(){answers[cursor]=null;check();}
+function move(delta){
+ if(cursor+delta===test.length){finish();return;}
+ cursor+=delta;checked=false;question();
+}
+function finish(){
+ const results=test.map((q,i)=>({id:q.id,prompt:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
+ const hits=results.filter(q=>q.answer===q.right).length;
+ const blanks=answers.filter(a=>a===null).length;
+ const misses=test.length-hits-blanks;
+ const ascends=mode==='normal'&&hits>=18&&!history.some(item=>item.mode==='normal'&&item.hits>=18);
+ if(mode!=='review'){
+  history.unshift({date:new Date().toISOString(),mode,hits,blanks,misses,results});
+  try {localStorage.setItem(key,JSON.stringify(history));} catch {}
+ }
+ render(back+'<h1>Resultado</h1><div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div><p>'+hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco</p>'+
+ (ascends?'<div class="panel"><strong>¡Subes al nivel 2!</strong></div>':'')+
+ results.map(q=>'<details class="panel" '+(q.answer!==q.right?'open':'')+'><summary>'+(q.answer===q.right?'Acierto':q.answer===null?'En blanco':'Fallo')+' · '+q.prompt+'</summary><p>Tu respuesta · '+(q.answer??'En blanco')+'<br>Correcta · '+q.right+'</p><small>'+q.note+'</small></details>').join('')+
+ button('Volver a los tests','modes()',true));
+}
+function progressPage(){
+ const total=field=>history.reduce((sum,item)=>sum+item[field],0);
+ render(back+'<h1>Mi progreso</h1><div class="panel"><strong>'+history.length+' tests completados</strong><p>'+total('hits')+' aciertos · '+total('misses')+' fallos · '+total('blanks')+' en blanco</p></div><h2>Historial</h2>'+
+ (history.length?history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(item.mode==='easy'?'Fácil':'Normal')+' · '+item.hits+'/20</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join(''):'<p>Tu primer test aparecerá aquí cuando lo entregues.</p>')+
+ '<small>El progreso se guarda en este navegador.</small>');
+}
+function review(){
+ const latest=new Map();
+ history.forEach(item=>item.results.forEach(q=>{if(!latest.has(q.id))latest.set(q.id,q);}));
+ const failed=[...latest.values()].filter(q=>q.answer!==null&&q.answer!==q.right);
+ render(back+'<h1>Mis fallos</h1><p>'+failed.length+' preguntas por repasar.</p>'+
+ (failed.length?button('Practicar mis fallos','startReview()',true):'')+
+ failed.map(q=>'<details class="panel"><summary>'+q.prompt+'</summary><p>'+q.right+'</p><small>'+q.note+'</small></details>').join(''));
+}
+function startReview(){
+ const latest=new Map();
+ history.forEach(item=>item.results.forEach(q=>{if(!latest.has(q.id))latest.set(q.id,q);}));
+ const failed=pool.filter(q=>latest.has(q.id)&&latest.get(q.id).answer!==null&&latest.get(q.id).answer!==q.right);
+ if(failed.length){mode='review';begin(shuffle(failed).slice(0,20));}
+}
+home();
+</script>
+</html>
