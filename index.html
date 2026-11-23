@@ -5,6 +5,11 @@
 <title>CLAVE 169</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff;color:#173653;font:16px/1.55 system-ui,sans-serif}main,header,footer{max-width:480px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c3deef}main{min-height:65vh;background:radial-gradient(ellipse at 80% 0%,#e2f4ff,transparent 65%)}h1,h2{font:500 2rem/1.12 Georgia;margin:12px 0}h1{font-size:clamp(2rem,9vw,3.3rem)}p,small,footer{color:#45627b}small{display:block}button,summary{cursor:pointer}button{font:inherit;color:inherit;display:block;width:100%;min-height:48px;border-radius:13px;padding:10px 14px;margin:8px 0;border:1px solid #a9d3ee;background:#f0f9ff;text-align:left}button.primary{background:#aedfff;color:#173653;font-weight:750;text-align:center}button.back{width:auto;background:transparent}button:disabled{opacity:.55;cursor:default}button[aria-pressed=true]{border-color:#aedfff;background:#d0ecff}button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #aedfff;outline-offset:3px}.panel{background:#f4faff;border:1px solid #c3deef;border-radius:16px;padding:15px;margin:10px 0}.tag,a,.score{color:#aedfff}.tag,a,.score{color:#175b8a}.tag{font-weight:700}button[aria-pressed=true]{border-color:#2272a7}.hero{padding:16px 0}.route{padding:8px 0}.route+.route{border-top:1px solid #c3deef}.score{font:3rem Georgia}progress{width:100%;accent-color:#aedfff}.feedback{border-left:4px solid #aedfff}summary{font-weight:700}
+.correct{--result:#166534;--result-bg:#effbf2;--result-border:#65a879}
+.incorrect{--result:#a11924;--result-bg:#fff1f2;--result-border:#cf7780}
+.correct,.incorrect,button.correct[aria-pressed=true],button.incorrect[aria-pressed=true]{color:var(--result);background:var(--result-bg);border-color:var(--result-border)}
+.correct p,.correct small,.incorrect p,.incorrect small{color:inherit}
+button.correct:disabled,button.incorrect:disabled{opacity:1}
 </style>
 <header><strong>CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
@@ -114,7 +119,10 @@ function home(){
 }
 const titles=['Principios generales del Estado','Derechos y deberes fundamentales','La Corona','Las Cortes Generales','Gobierno y Administración','Relaciones entre Gobierno y Cortes','Poder Judicial','Economía y Hacienda','Organización territorial','Tribunal Constitucional','Reforma constitucional'];
 function study(){
- render(back+'<h1>Estudiar</h1>'+cardsIntro.map(([title,body])=>'<details class="panel"><summary>'+title+'</summary><p style="white-space:pre-line">'+body+'</p></details>').join('')+
+ render(back+'<h1>Estudiar</h1>'+button('Tema 1 · Introducción a la Constitución','studyTopic()',true));
+}
+function studyTopic(){
+ render(button('Volver a Estudiar','study()')+'<h1>Tema 1</h1><p>Introducción a la Constitución</p>'+cardsIntro.map(([title,body])=>'<details class="panel"><summary>'+title+'</summary><p style="white-space:pre-line">'+body+'</p></details>').join('')+
  '<details class="panel"><summary>Mapa de los 11 títulos</summary><ul>'+titles.map((title,i)=>'<li><strong>'+(['Preliminar','I','II','III','IV','V','VI','VII','VIII','IX','X'][i])+'</strong> · '+title+'</li>').join('')+'</ul></details>'+
  '<p><a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229#preambulo" target="_blank" rel="noopener">Ver el texto oficial</a></p>'+button('Pasar a los tests','modes()',true));
 }
@@ -134,6 +142,9 @@ function begin(selection){
  test=selection.map(q=>({...q,prompt:mode==='normal'?shuffle(q.prompts.slice(1))[0]:shuffle(q.prompts.slice(0,2))[0],options:shuffle([q.right,...q.wrong])}));
  answers=Array(test.length).fill(null);cursor=0;checked=false;question();
 }
+function answerStatus(answer,right){
+ return answer===null?'':answer===right?'correct':'incorrect';
+}
 function question(){
  const q=test[cursor];
  const instant=mode!=='normal';
@@ -141,8 +152,8 @@ function question(){
  render(button('Salir del test',"if(confirm('¿Salir de este intento?'))home()")+
  '<small>Pregunta '+(cursor+1)+' de '+test.length+' · '+answers.filter(a=>a!==null).length+' respondidas</small>'+
  '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+q.prompt+'</h2>'+
- q.options.map((option,i)=>'<button aria-pressed="'+(option===selected)+'" '+(checked?'disabled':'')+' onclick="selectAnswer('+i+')">'+option+'</button>').join('')+
- (checked?'<div class="panel feedback" role="status"><strong>'+(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong><p>'+q.note+'</p></div>':'')+
+ q.options.map((option,i)=>'<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected)+'" '+(checked?'disabled':'')+' onclick="selectAnswer('+i+')">'+option+'</button>').join('')+
+ (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong><p>'+q.note+'</p></div>':'')+
  (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
  (instant&&!checked?button('Dejar en blanco','skip()'):'')+
  (!instant&&selected!==null?button('Quitar respuesta','clearAnswer()'):'')+
@@ -172,7 +183,7 @@ function finish(){
  }
  render(back+'<h1>Resultado</h1><div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div><p>'+hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco</p>'+
  (ascends?'<div class="panel"><strong>¡Subes al nivel 2!</strong></div>':'')+
- results.map(q=>'<details class="panel" '+(q.answer!==q.right?'open':'')+'><summary>'+(q.answer===q.right?'Acierto':q.answer===null?'En blanco':'Fallo')+' · '+q.prompt+'</summary><p>Tu respuesta · '+(q.answer??'En blanco')+'<br>Correcta · '+q.right+'</p><small>'+q.note+'</small></details>').join('')+
+ results.map(q=>'<details class="panel '+answerStatus(q.answer,q.right)+'" '+(q.answer!==q.right?'open':'')+'><summary>'+(q.answer===q.right?'Acierto':q.answer===null?'En blanco':'Fallo')+' · '+q.prompt+'</summary><p>Tu respuesta · '+(q.answer??'En blanco')+'<br>Correcta · '+q.right+'</p><small>'+q.note+'</small></details>').join('')+
  (mode==='review'?button('Volver a mis fallos','review()',true):button('Volver a los tests','modes()',true)));
 }
 function progressPage(){
