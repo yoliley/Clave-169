@@ -15,9 +15,11 @@ button.correct:disabled,button.incorrect:disabled{opacity:1}
 .brand{display:flex;align-items:center;gap:10px}.brand img{display:block;width:36px;height:36px;border-radius:9px}
 .guide{display:flex;align-items:center;gap:14px;background:#e4f5ff;border:1px solid #a9d3ee;border-radius:16px;padding:14px;margin:14px 0}.guide img{flex:none;border-radius:12px}.guide p{margin:3px 0}.door-state{margin:10px 0;color:#175b8a;font-weight:700}.flash{min-height:160px}.lines{white-space:pre-line}
 .door-state{display:flex;align-items:center;gap:10px}.door-icon{display:inline-block;flex:none;width:18px;height:25px;border:2px solid #2673a6;border-radius:4px 4px 1px 1px;background:radial-gradient(circle at 75% 55%,#2673a6 0 1px,transparent 2px),#deeffb}.door-open .door-icon{border-color:#388354;transform:perspective(32px) rotateY(-27deg);background:#d3f2de}.door-open{color:#166534}
+.flash-scene{perspective:1000px;margin:12px 0}.flash-button{padding:0;border:0;background:none;margin:0;perspective:1000px}.flash-button:hover{background:none}.flash-stack{display:grid;transform-style:preserve-3d;transition:transform .55s ease}.flash-stack.flipped{transform:rotateY(180deg)}.flash-face{grid-area:1/1;display:flex;flex-direction:column;justify-content:center;min-height:190px;padding:18px;border:1px solid #a9d3ee;border-radius:16px;background:#e7f6ff;backface-visibility:hidden;-webkit-backface-visibility:hidden}.flash-face strong{font-size:1.2rem}.flash-face small{margin-top:8px}.flash-answer{transform:rotateY(180deg);background:#f4faff}.flash-controls{visibility:hidden}.flash-controls.visible{visibility:visible}label{display:block;margin:12px 0}input{display:block;width:100%;padding:10px;margin-top:4px;border:1px solid #a9d3ee;border-radius:8px;font:inherit}@media(prefers-reduced-motion:reduce){.flash-stack{transition:none}}
 </style>
 <header><strong class="brand"><img src="./clave-169-icon.png" width="36" height="36" alt="">CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
+<small id="sync-status" role="status" style="max-width:440px;margin:auto;padding:0 20px"></small>
 <footer><a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229" target="_blank" rel="noopener">Consultar la Constitución en el BOE</a></footer>
 <script>
 const cards = [
@@ -1026,7 +1028,7 @@ const titles=['Principios generales del Estado','Derechos y deberes fundamentale
 const factsByBlock=blocks.map((_,i)=>facts.filter(row=>row[0]===i+1));
 const formatBlock=i=>'Bloque '+(i+1)+' · '+blocks[i];
 const readStored=(suffix,fallback)=>{try{return JSON.parse(localStorage.getItem(key+suffix))??fallback;}catch{return fallback;}};
-function saveStored(suffix,value){try{localStorage.setItem(key+suffix,JSON.stringify(value));}catch{}}
+function saveStored(suffix,value){if(account){queueSync();return;}try{localStorage.setItem(key+suffix,JSON.stringify(value));}catch{}}
 const memory=readStored('-tarjetas',{});
 const played=readStored('-juegos',{});
 const now=()=>Date.now();
@@ -1069,7 +1071,7 @@ function render(html){
 }
 function home(){
  render(heading('La Constitución desde cero')+paragraph('Tema 1 · Derechos y deberes fundamentales. La Corona.')+
- button('Estudiar','study()',true)+button('Tests','testMenu()')+button('Mi progreso','progressPage()')+button('Mis fallos','review()'));
+ button('Estudiar','study()',true)+button('Tests','testMenu()')+button('Mi progreso','progressPage()')+button('Mis fallos','review()')+button('Mi cuenta','accountPage()'));
 }
 const topics=[{title:'Tema 1 · La Constitución Española',open:'studyTopic()'}];
 function study(){
@@ -1133,15 +1135,27 @@ function showCard(){
  const q=deck[cardPosition];
  if(!q){render(topicBack+heading('Tarjetas repasadas')+guide('Las que marcaste para repasar volverán mañana.')+button('Jugar con la Llave','startGame('+selectedBlock+')',true));return;}
  render(topicBack+heading('Tarjetas didácticas')+paragraph(formatBlock(selectedBlock)+' · '+(cardPosition+1)+' de '+deck.length)+
- '<section class="panel flash"><h2>'+escapeHtml(q.prompts[0])+'</h2>'+(flipped?paragraph(q.right)+'<small>'+escapeHtml(q.note)+'</small>':'')+'</section>'+
- (flipped?button('Me la sé','rateCard(true)',true)+button('Repasar','rateCard(false)'):button('Girar tarjeta','flipCard()',true)));
+ '<div class="flash-scene"><button class="flash-button" type="button" onclick="flipCard()" aria-pressed="false"><span class="flash-stack">'+
+ '<span class="flash-face flash-question"><strong>'+escapeHtml(q.prompts[0])+'</strong><small>Toca para girar</small></span>'+
+ '<span class="flash-face flash-answer" aria-hidden="true"><strong>'+escapeHtml(q.right)+'</strong><small>'+escapeHtml(q.note)+'</small></span></span></button></div>'+
+ '<div class="flash-controls" inert>'+button('Me la sé','rateCard(true)',true)+button('Repasar','rateCard(false)')+'</div>');
 }
-function flipCard(){flipped=true;showCard();}
+function flipCard(){
+ flipped=!flipped;
+ const card=screen.querySelector('.flash-button');
+ card.setAttribute('aria-pressed',String(flipped));
+ card.querySelector('.flash-stack').classList.toggle('flipped',flipped);
+ card.querySelector('.flash-question').setAttribute('aria-hidden',String(flipped));
+ card.querySelector('.flash-answer').setAttribute('aria-hidden',String(!flipped));
+ const controls=screen.querySelector('.flash-controls');
+ controls.classList.toggle('visible',flipped);
+ controls.inert=!flipped;
+}
 function rateCard(known){
  const id=deck[cardPosition].id;
  const old=memory[id]?.step??0;
  const step=known?Math.min(old+1,3):0;
- memory[id]={step,due:now()+[1,1,3,7][step]*duration};
+ memory[id]={step,updated:now(),due:now()+[1,1,3,7][step]*duration};
  saveStored('-tarjetas',memory);
  cardPosition++;flipped=false;showCard();
 }
@@ -1278,7 +1292,7 @@ function finish(){
   saveStored('-repaso',mastered);
  }else{
   if(mode==='game'){played[selectedBlock]=true;saveStored('-juegos',played);}
-  history.unshift({date:new Date().toISOString(),mode,block:selectedBlock,hits,blanks,misses,results});
+  history.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),mode,block:selectedBlock,hits,blanks,misses,results});
   saveStored('',history);
  }
  const ascended=levelNumber()>before;
@@ -1302,7 +1316,7 @@ function progressPage(){
   const covered=available.filter(q=>seen.has(q.id)||seen.has(q.id+'-art')).length;
   return '<div class="panel"><strong>'+escapeHtml(name)+'</strong>'+paragraph(covered+' de '+available.length+' fichas de contenido practicadas · '+(hasAscended(i)?'Puerta abierta':'Ascenso pendiente'))+'</div>';
  }).join('')+'<h2>Historial</h2>'+history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(modeNames[item.mode]??item.mode)+' · '+item.hits+'/'+item.results.length+'</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join('')+
- '<small>El progreso se guarda en este navegador.</small>');
+ '<small>'+ (account?'El progreso de tu cuenta se sincroniza con Firebase.':'El progreso de invitado se guarda en este navegador.') +'</small>');
 }
 function pendingMistakes(){
  const latest=new Map();
@@ -1328,6 +1342,147 @@ function startReview(){
   return {...q,prompt:q?.prompts?shuffle(q.prompts)[0]:miss.prompt};
  }).filter(q=>q.right));
 }
+const firebaseConfig = {
+ apiKey: '',
+ authDomain: '',
+ projectId: '',
+ appId: ''
+};
+const syncStatus=document.getElementById('sync-status');
+const configured=Object.values(firebaseConfig).every(Boolean);
+let backend=null, account=null, loadingAccount=false, syncChain=Promise.resolve(), accountRevision=0;
+const emptyProgress=()=>({history:[],mastered:{},memory:{},played:{}});
+const snapshotProgress=()=>({history,mastered,memory,played});
+function replaceProgress(data){
+ history=data.history;
+ mastered=data.mastered;
+ for(const name of Object.keys(memory))delete memory[name];
+ for(const name of Object.keys(played))delete played[name];
+ Object.assign(memory,data.memory);
+ Object.assign(played,data.played);
+}
+function mergeProgress(a,b){
+ const attempts=new Map([...a.history,...b.history].map(item=>[item.id??JSON.stringify(item),item]));
+ const merged={history:[...attempts.values()].sort((x,y)=>y.date.localeCompare(x.date)),mastered:{...a.mastered},memory:{...a.memory},played:{...a.played,...b.played}};
+ for(const [id,date] of Object.entries(b.mastered))if(!merged.mastered[id]||date>merged.mastered[id])merged.mastered[id]=date;
+ for(const [id,card] of Object.entries(b.memory))if(!merged.memory[id]||(card.updated??0)>=(merged.memory[id].updated??0))merged.memory[id]=card;
+ return merged;
+}
+function accountCache(uid){return readStored('-cuenta-'+uid,emptyProgress());}
+function cacheAccount(uid,progress){try{localStorage.setItem(key+'-cuenta-'+uid,JSON.stringify(progress));}catch{}}
+function queueSync(){
+ const uid=account?.uid;
+ if(!uid||loadingAccount)return;
+ cacheAccount(uid,snapshotProgress());
+ syncStatus.textContent='Guardando progreso…';
+ syncChain=syncChain.then(async()=>{
+  if(account?.uid!==uid)return;
+  const pending=accountCache(uid);
+  const ref=backend.doc(backend.db,'users',uid);
+  await backend.runTransaction(backend.db,async transaction=>{
+   const saved=await transaction.get(ref);
+   const progress=mergeProgress({...emptyProgress(),...saved.data()},pending);
+   transaction.set(ref,progress);
+  });
+  if(account?.uid===uid)syncStatus.textContent='Progreso sincronizado';
+ }).catch(()=>{
+  if(account?.uid===uid)syncStatus.textContent='Pendiente de sincronizar. Puedes reintentar desde Mi cuenta.';
+ });
+}
+async function changeAccount(user){
+ const revision=++accountRevision;
+ loadingAccount=true;
+ account=null;
+ syncStatus.textContent='Cargando progreso…';
+ render(heading('Cargando progreso'));
+ if(user){
+  let progress=accountCache(user.uid);
+  try{
+   const saved=await backend.getDocFromServer(backend.doc(backend.db,'users',user.uid));
+   progress=mergeProgress({...emptyProgress(),...saved.data()},progress);
+  }catch{}
+  if(revision!==accountRevision)return;
+  replaceProgress(progress);
+  account=user;
+ }else{
+  replaceProgress({history:readStored('',[]),mastered:readStored('-repaso',{}),memory:readStored('-tarjetas',{}),played:readStored('-juegos',{})});
+ }
+ loadingAccount=false;
+ syncStatus.textContent=user?'Cuenta conectada':'Progreso en este navegador';
+ home();
+ if(user)queueSync();
+}
+function accountPage(){
+ if(!configured){
+  render(back+heading('Mi cuenta')+paragraph('El acceso con cuenta estará disponible cuando se conecte el proyecto de Firebase.'));
+  return;
+ }
+ if(!backend||loadingAccount){
+  render(back+heading('Mi cuenta')+paragraph(syncStatus.textContent));
+  return;
+ }
+ if(account){
+  const guest=readStored('',[]).length||Object.keys(readStored('-tarjetas',{})).length;
+  render(back+heading('Mi cuenta')+paragraph(account.email)+
+  (guest?button('Importar progreso de invitado','importGuest()'):'')+
+  button('Sincronizar ahora','queueSync()',true)+button('Cerrar sesión','closeAccount()'));
+  return;
+ }
+ render(back+heading('Mi cuenta')+
+ '<form id="account-form"><label>Correo electrónico<input name="email" type="email" autocomplete="email" required></label>'+
+ '<label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>'+
+ '<button class="primary" type="submit" value="login">Iniciar sesión</button><button type="submit" value="register">Crear cuenta</button>'+
+ '<button type="button" onclick="resetPassword()">Restablecer contraseña</button></form><p id="account-message" role="status"></p>');
+ document.getElementById('account-form').addEventListener('submit',submitAccount);
+}
+async function submitAccount(event){
+ event.preventDefault();
+ const form=event.target;
+ const registering=event.submitter?.value==='register';
+ if(registering&&form.elements.password.value.length<6){accountMessage('Usa una contraseña de al menos 6 caracteres.');return;}
+ form.querySelectorAll('button').forEach(button=>button.disabled=true);
+ try{
+  const action=registering?backend.createUserWithEmailAndPassword:backend.signInWithEmailAndPassword;
+  await action(backend.auth,form.elements.email.value.trim(),form.elements.password.value);
+ }catch(error){
+  const messages={'auth/email-already-in-use':'Ya existe una cuenta con ese correo.','auth/invalid-credential':'Revisa el correo y la contraseña.','auth/weak-password':'Elige una contraseña más segura.','auth/network-request-failed':'Revisa tu conexión e inténtalo de nuevo.'};
+  accountMessage(messages[error.code]??'El acceso no se pudo completar. Revisa la configuración de Firebase o inténtalo más tarde.');
+ }finally{form.querySelectorAll('button').forEach(button=>button.disabled=false);}
+}
+function accountMessage(message){const box=document.getElementById('account-message');if(box)box.textContent=message;}
+async function resetPassword(){
+ const email=document.getElementById('account-form').elements.email;
+ if(!email.reportValidity())return;
+ try{await backend.sendPasswordResetEmail(backend.auth,email.value.trim());accountMessage('Si hay una cuenta con ese correo, recibirás un enlace.');}
+ catch(error){accountMessage(error.code==='auth/user-not-found'?'Si hay una cuenta con ese correo, recibirás un enlace.':'No se pudo enviar el correo. Inténtalo de nuevo.');}
+}
+async function closeAccount(){
+ try{await backend.signOut(backend.auth);}catch{syncStatus.textContent='No se pudo cerrar sesión. Inténtalo de nuevo.';}
+}
+function importGuest(){
+ if(!account||!confirm('¿Añadir el progreso de invitado de este navegador a esta cuenta?'))return;
+ replaceProgress(mergeProgress(snapshotProgress(),{history:readStored('',[]),mastered:readStored('-repaso',{}),memory:readStored('-tarjetas',{}),played:readStored('-juegos',{})}));
+ queueSync();
+ accountPage();
+}
+async function initFirebase(){
+ if(!configured)return;
+ loadingAccount=true;
+ render(heading('Cargando cuenta'));
+ try{
+  const sdk='https://www.gstatic.com/firebasejs/11.10.0/';
+  const [app,auth,db]=await Promise.all([import(sdk+'firebase-app.js'),import(sdk+'firebase-auth.js'),import(sdk+'firebase-firestore.js')]);
+  const instance=app.initializeApp(firebaseConfig);
+  backend={...auth,...db,auth:auth.getAuth(instance),db:db.getFirestore(instance)};
+  auth.onAuthStateChanged(backend.auth,changeAccount);
+ }catch{
+  loadingAccount=false;
+  syncStatus.textContent='Firebase no está disponible. Puedes estudiar como invitada.';
+  home();
+ }
+}
+window.addEventListener('online',()=>{if(account)queueSync();});
 home();
+initFirebase();
 </script>
 </html>
