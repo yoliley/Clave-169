@@ -28,6 +28,7 @@ button.game-action{background:#fff0b8;border-color:#e9ca67;color:#694b00}
 button.account-action{background:#e9f0ff;border-color:#b3c8f4;color:#254e91;font-weight:700}
 .achievement p{color:inherit;margin:0;font-weight:700}
 .match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.match-grid section{min-width:0}.match-grid button{overflow-wrap:anywhere}
+.trap-tokens button{display:inline-block;width:auto;margin:3px;padding:4px 8px}.parrot-party{display:flex;gap:12px;align-items:center}.parrot-party img{object-fit:contain;flex:none;animation:parrot-dance .45s ease-in-out 6 alternate}@keyframes parrot-dance{from{transform:rotate(-11deg) translateY(0)}to{transform:rotate(11deg) translateY(-8px)}}@media(prefers-reduced-motion:reduce){.parrot-party img{animation:none}}
 </style>
 <header><strong class="brand"><img src="./clave-169-icon.png" width="36" height="36" alt="">CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
@@ -1075,7 +1076,10 @@ function hasAscended(block){
 }
 const finalPassed=()=>history.some(item=>item.mode==='final'&&item.hits>=32);
 const doorsOpen=()=>blocks.every((_,i)=>hasAscended(i));
-function levelNumber(){return 1+blocks.filter((_,i)=>hasAscended(i)).length+Number(finalPassed());}
+function levelNumber(){
+ const earned=Math.max(1+Math.floor(experience()/100),1+blocks.filter((_,i)=>hasAscended(i)).length+Number(finalPassed()));
+ return officialPasses()<2?Math.min(10,earned):earned;
+}
 function render(html){
  screen.innerHTML=html;
  document.getElementById('level').textContent='Nivel '+levelNumber();
@@ -1084,9 +1088,9 @@ function render(html){
 function home(){
  render(heading('La Constitución desde cero')+paragraph('Tema 1 · Derechos y deberes fundamentales. La Corona.')+
  (account?.displayName?paragraph('Hola, '+account.displayName+'.'):'')+
- '<div class="home-actions">'+button('Estudiar','study()',false,'study-action')+button('Tests','testMenu()',false,'test-action')+
- button('Mi progreso','progressPage()',false,'progress-action')+button('Mis fallos','review()',false,'review-action')+'</div>'+
- button(account?'Mi cuenta':'Iniciar sesión o crear cuenta','accountPage()',false,'account-action'));
+ '<div class="home-actions">'+button('📚 Estudiar','study()',false,'study-action')+button('📝 Tests','testMenu()',false,'test-action')+
+ button('📈 Mi progreso','progressPage()',false,'progress-action')+button('🧩 Mis fallos','review()',false,'review-action')+'</div>'+
+ button('⚡ Repaso de hoy','startDaily()',true,'game-action')+experiencePanel()+button(account?'Mi cuenta':'Iniciar sesión o crear cuenta','accountPage()',false,'account-action'));
 }
 const topics=[{title:'Tema 1 · La Constitución Española',open:'studyTopic()'}];
 function study(){
@@ -1098,7 +1102,7 @@ function studyTopic(){
  blocks.map((name,i)=>details(formatBlock(i),
  '<div class="door-state '+(hasAscended(i)?'door-open':'')+'"><span class="door-icon" aria-hidden="true"></span>'+(hasAscended(i)?'Puerta abierta':'Puerta por abrir')+(played[i]?' · Juego completado':'')+'</div>'+
  button('Leer','reading('+i+')')+button('Tarjetas didácticas','startCards('+i+')')+
- button('Jugar','startGame('+i+')',false,'game-action')+button('Rellenar huecos','startWritten('+i+')',false,'game-action')+button('Une las frases','startMatching('+i+')',false,'game-action')+button('Test','modes('+i+')'))).join('')+
+ button('Jugar','startGame('+i+')',false,'game-action')+button('Rellenar huecos','startWritten('+i+')',false,'game-action')+button('Une las frases','startMatching('+i+')',false,'game-action')+button('🔎 Detecta la trampa',"startSpecial('trap',"+i+")",false,'game-action')+button('⚔️ Batalla de conceptos',"startSpecial('battle',"+i+")",false,'game-action')+button('Test','modes('+i+')'))).join('')+
  '<section class="panel"><h2>La puerta final</h2>'+paragraph(doorsOpen()?'35 retos, cinco por bloque. Necesitas 32 aciertos para el ascenso final.':'Abre las siete puertas para desbloquear los 35 retos del Tema 1.')+
  (doorsOpen()?button(finalPassed()?'Repetir reto final':'Empezar reto final','startFinal()',false,'game-action'):'')+'</section>');
 }
@@ -1329,17 +1333,133 @@ function joinPhrase(i){
 }
 function startGame(block){selectedBlock=block;mode='game';begin(gameItems(block,8));}
 function startFinal(){if(!doorsOpen())return;mode='final';begin(shuffle(blocks.flatMap((_,i)=>gameItems(i,5))));}
+const practiceModes=['easy','normal','hard','game','written','review','daily','trap','battle'];
+const officialExams=['Convocatoria 2024 · Ingreso libre','Convocatoria 2025 · Ingreso libre'];
+const officialPage='https://www.inap.es/es/seleccion/procesos-selectivos-de-cuerposescalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado';
+function officialPasses(){
+ return new Set(history.filter(item=>item.mode==='official'&&officialExams.includes(item.exam)&&item.approved&&item.misses<=3).map(item=>item.exam)).size;
+}
+function experience(){return history.reduce((sum,item)=>sum+(item.mode==='official'?0:Math.max(0,item.hits??0)*5),0);}
+function experiencePanel(){
+ const level=levelNumber(), xp=experience(), passes=officialPasses();
+ const locked=level===10&&passes<2;
+ return '<section class="panel"><strong>✨ Nivel '+level+' · '+xp+' XP</strong>'+
+ '<progress aria-label="Experiencia del nivel" value="'+(locked?100:xp%100)+'" max="100"></progress>'+
+ (locked?paragraph('🔒 Para superar el nivel 10, registra dos simulacros oficiales distintos aprobados con un máximo de 3 fallos. ('+passes+'/2)'):'')+
+ button('📋 Simulacros oficiales','officialMenu()',false,'test-action')+'</section>';
+}
+function officialMenu(){
+ render(back+heading('📋 Simulacros oficiales de TAI')+
+ paragraph('Haz el examen del INAP, corrígelo con su plantilla definitiva y registra aquí el resultado. La app guarda lo que indiques.')+
+ '<p><a href="'+officialPage+'" target="_blank" rel="noopener">Cuestionarios y plantillas del INAP</a></p>'+
+ paragraph(officialPasses()+' de 2 simulacros válidos para desbloquear el nivel 10.')+
+ '<form id="official-form"><label>Convocatoria<select name="exam">'+officialExams.map(exam=>'<option>'+escapeHtml(exam)+'</option>').join('')+'</select></label>'+
+ '<label>Fallos<input name="misses" type="number" min="0" max="100" required></label>'+
+ '<label>Aprobado según la corrección oficial<select name="passed"><option value="no">No</option><option value="yes">Sí</option></select></label>'+
+ '<button class="primary">Guardar resultado</button></form>');
+ document.getElementById('official-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  const {exam,misses,passed}=event.currentTarget.elements;
+  const count=misses.valueAsNumber;
+  if(!officialExams.includes(exam.value)||!Number.isInteger(count)||count<0||count>100)return;
+  history.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),mode:'official',exam:exam.value,approved:passed.value==='yes',misses:count,hits:0,blanks:0,results:[]});
+  saveStored('',history);
+  officialMenu();
+ });
+}
+const trapData=[
+ ['La soberanía nacional reside en el Gobierno.','Gobierno','pueblo español',['Senado','Tribunal Constitucional'],'Piensa en quién es titular de la soberanía, no en quién gobierna.'],
+ ['Los españoles son mayores de edad a los 21 años.','21','18',['16','20'],'Es la edad habitual para votar por primera vez.'],
+ ['La enseñanza básica es obligatoria y de pago.','de pago','gratuita',['voluntaria','selectiva'],'Piensa en si la Constitución exige pagar por cursarla.'],
+ ['Los convenios colectivos tienen fuerza orientativa.','orientativa','vinculante',['consultiva','provisional'],'La palabra indica que el convenio obliga.'],
+ ['El artículo 47 busca fomentar la especulación con el suelo.','fomentar','impedir',['autorizar','premiar'],'La norma intenta evitar la especulación.'],
+ ['El estado de sitio requiere mayoría simple del Congreso.','simple','absoluta',['de dos tercios','de tres quintos'],'La mayoría exigida se calcula sobre todos los miembros.'],
+ ['El Rey es el jefe del Gobierno.','Gobierno','Estado',['Congreso','Senado'],'Piensa en qué institución representa al conjunto de España.']
+];
+const battleData=[
+ ['¿Qué pasó cuando el pueblo votó el texto constitucional?','Ratificación','Aprobación','Las Cortes aprobaron el texto y el pueblo lo ratificó en referéndum.'],
+ ['¿De qué hablamos cuando preguntamos si alguien es español de origen?','Nacionalidad','Mayoría de edad','La nacionalidad y la edad legal se regulan en los artículos 11 y 12.'],
+ ['¿Qué se exige para una manifestación en la vía pública?','Comunicación previa','Autorización previa','El artículo 21.2 exige comunicación previa.'],
+ ['¿Qué derecho se vincula a fines de interés general?','Fundación','Herencia','El artículo 34 reconoce el derecho de fundación para fines de interés general.'],
+ ['¿Qué principio se refiere a pensiones periódicamente actualizadas para la tercera edad?','Bienestar en la tercera edad','Protección de la juventud','El artículo 50 trata de la tercera edad; el 48, de la juventud.'],
+ ['¿Qué estado declara el Congreso por mayoría absoluta?','Sitio','Excepción','El Congreso declara el sitio; el Gobierno declara la excepción con autorización previa del Congreso.'],
+ ['¿Qué acto se refiere a confirmar formalmente determinados actos del Rey?','Refrendo','Indulto','El artículo 64 regula el refrendo y la responsabilidad de quien refrenda.']
+];
+function specialItem(kind,block){
+ if(kind==='trap'){
+  const [sentence,error,right,wrong,hint]=trapData[block];
+  return {id:'trampa-'+block,block,trap:sentence,trapWord:error,prompt:'¿Qué palabra corrige la frase?',right,wrong,hint,note:sentence.replace(error,right)};
+ }
+ const [prompt,right,wrong,note]=battleData[block];
+ return {id:'batalla-'+block,block,prompt,right,wrong:[wrong],note,hint:'Fíjate en qué distingue a las dos figuras en este caso.'};
+}
+function startSpecial(kind,block){mode=kind;selectedBlock=block;begin([specialItem(kind,block)]);}
+function allPracticeItems(){
+ return blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5),...writtenItems(i),...matchingItems(i),specialItem('trap',i),specialItem('battle',i)]);
+}
+function startDaily(){
+ const catalog=allPracticeItems();
+ const order=[...pendingMistakes().map(q=>q.id),
+  ...Object.entries(memory).filter(([,data])=>data.due<=now()).map(([id])=>String(id))];
+ const focus=blocks.findIndex((_,i)=>!hasAscended(i));
+ const block=focus<0?0:focus;
+ const unique=new Map();
+ for(const id of order){
+  const q=catalog.find(item=>String(item.id)===String(id));
+  if(q)unique.set(String(q.id),q);
+ }
+ for(const q of shuffle(questionsFor(block)))if(!unique.has(String(q.id)))unique.set(String(q.id),q);
+ mode='daily';selectedBlock=block;
+ begin([...unique.values()].slice(0,5).map(q=>({...q,prompt:q.prompt??q.prompts[0]})));
+}
+const parrotImage='data:image/webp;base64,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';
+const parrotLines=[
+ '¡Las Cortes aprueban y el pueblo ratifica!',
+ '¡Dieciocho años y la mayoría de edad ya la tienes dominada!',
+ '¡La enseñanza básica es obligatoria y gratuita!',
+ '¡Igualdad y progresividad: menuda pareja!',
+ '¡Salud, familia y vivienda ya te suenan de memoria!',
+ '¡El Congreso declara el sitio por mayoría absoluta!',
+ '¡El Rey sanciona y promulga las leyes!'
+];
+function parrotCelebration(block,alias){
+ return '<section class="panel achievement parrot-party" role="status"><img src="'+parrotImage+'" alt="Loro gris africano bailando" width="92" height="92"><div>'+
+ paragraph('🎉 ¡Enhorabuena'+(alias?', '+alias:'')+'!')+paragraph(parrotLines[block])+'</div></section>';
+}
+let trapFound=false,hintShown=false,trapFeedback='';
+function showHint(){if(practiceModes.includes(mode)&&!checked){hintShown=true;question();}}
+function trapTokens(q){
+ const at=q.trap.indexOf(q.trapWord);
+ return [...q.trap.slice(0,at).trim().split(/\s+/).filter(Boolean),q.trapWord,...q.trap.slice(at+q.trapWord.length).trim().split(/\s+/).filter(Boolean)];
+}
+function findTrap(index){
+ const q=test[cursor];
+ trapFound=trapTokens(q)[index]===q.trapWord;
+ trapFeedback=trapFound?'¡Encontraste la trampa! Ahora elige la corrección.':'Esa parte está bien. Prueba con otra.';
+ question();
+}
+function hintFor(q){
+ if(q.hint)return q.hint;
+ if(q.steps)return 'Empieza con: '+q.steps[0]+'.';
+ if(q.ref)return 'Busca la regla en el artículo '+q.ref+'. Empieza por identificar a quién o a qué se aplica.';
+ if(mode==='written')return 'La respuesta empieza por «'+q.right.slice(0,1)+'».';
+ return 'Fíjate en el vocabulario exacto de la pregunta. La respuesta empieza por «'+q.right.slice(0,1)+'».';
+}
 function begin(items){
  test=items.map(q=>({...q,options:shuffle(q.steps??[q.right,...(q.wrong??[])])}));
- answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];
+ answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];trapFound=false;hintShown=false;trapFeedback='';
  question();
 }
 function answerStatus(answer,right){return answer===null?'':answer===right?'correct':'incorrect';}
 function question(){
  const q=test[cursor], selected=answers[cursor];
- const instant=['easy','game','review','written'].includes(mode);
+ const instant=['easy','game','review','written','daily','trap','battle'].includes(mode);
  const game=['game','final','written'].includes(mode);
  const order=q.steps;
+ const revealOptions=mode!=='trap'||trapFound;
+ const trapSentence=q.trap?(mode==='trap'?'<div class="panel trap-tokens">'+
+ trapTokens(q).map((word,i)=>'<button type="button" onclick="findTrap('+i+')" '+(trapFound?'disabled':'')+'>'+escapeHtml(word)+'</button>').join('')+
+ '<p role="status">'+escapeHtml(trapFeedback||'Toca la parte que está mal.')+'</p></div>':paragraph(q.trap)):'';
  const options=q.options.map((option,i)=>{
   const position=order?sequence.indexOf(option):-1;
   return '<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected||position>=0)+'" '+(checked||position>=0?'disabled':'')+' onclick="selectAnswer('+i+')">'+(position>=0?(position+1)+'. ':'')+escapeHtml(option)+'</button>';
@@ -1348,7 +1468,10 @@ function question(){
  (game?guide(mode==='written'?'Elige la palabra o el número que falta.':order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
  '<small>'+escapeHtml(formatBlock(q.block??selectedBlock))+' · '+(cursor+1)+' de '+test.length+'</small>'+
  '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+escapeHtml(q.prompt)+'</h2>'+
- (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+options+
+ (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+trapSentence+(revealOptions?options:'')+
+ (!checked&&practiceModes.includes(mode)?button('💡 Pista de la Llave','showHint()'): '')+
+ (hintShown&&!checked?guide(hintFor(q)):'')+
+ (q.retry?'<small>🔁 Segunda oportunidad</small>':'')+
  (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+escapeHtml(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong>'+paragraph(q.note)+'</div>':'')+
  (!checked&&(sequence.length||(!instant&&selected!==null))?button(order?'Reiniciar orden':'Quitar respuesta','clearAnswer()'):'')+
  (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
@@ -1365,21 +1488,32 @@ function selectAnswer(i){
  question();
 }
 function clearAnswer(){answers[cursor]=null;sequence=[];question();}
-function check(){checked=true;question();}
+function check(){
+ const q=test[cursor];
+ if(['game','written','daily','battle'].includes(mode)&&answers[cursor]!==null&&answers[cursor]!==q.right&&!q.retry&&!q.steps){
+  const original=questionsFor(q.block).find(item=>item.id===q.id);
+  const prompt=original?.prompts.find(text=>text!==q.prompt)??'Vuelve a pensar en esta regla. '+q.prompt;
+  const at=Math.min(cursor+3,test.length);
+  test.splice(at,0,{...q,prompt,retry:true,options:shuffle(q.options)});
+  answers.splice(at,0,null);
+ }
+ checked=true;
+ question();
+}
 function skip(){answers[cursor]=null;sequence=[];check();}
 function move(delta){
  if(cursor+delta===test.length){finish();return;}
- cursor+=delta;checked=false;
+ cursor+=delta;checked=false;trapFound=false;hintShown=false;trapFeedback='';
  sequence=test[cursor].steps&&answers[cursor]!==null?answers[cursor].split(' → '):[];
  question();
 }
-const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',written:'Rellenar huecos',matching:'Une las frases',review:'Repaso'};
+const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',written:'Rellenar huecos',matching:'Une las frases',daily:'Repaso de hoy',trap:'Detecta la trampa',battle:'Batalla de conceptos',official:'Simulacro oficial',review:'Repaso'};
 function finish(){
- const results=test.map((q,i)=>({id:q.id,block:q.block,prompt:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
+ const results=test.map((q,i)=>({id:q.id,block:q.block,prompt:q.trap?q.prompt+' '+q.trap:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
  const hits=results.filter(q=>q.answer===q.right).length;
  const blanks=answers.filter(a=>a===null).length;
  const misses=test.length-hits-blanks;
- const before=levelNumber();
+ const before=levelNumber(), doorBefore=hasAscended(selectedBlock);
  const comparable=history.find(item=>item.mode===mode&&(mode==='final'||(item.block??0)===selectedBlock)&&item.results.length===results.length);
  const improvement=comparable&&misses<comparable.misses&&hits>=comparable.hits;
  const alias=account?.displayName;
@@ -1395,9 +1529,13 @@ function finish(){
   saveStored('',history);
  }
  const ascended=levelNumber()>before;
+ const opened=mode==='ascenso'&&!doorBefore&&hasAscended(selectedBlock);
+ const celebrate=mode==='ascenso'&&hits>=18&&misses<3;
  render(topicBack+heading('Resultado · '+modeNames[mode])+'<div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div>'+
  paragraph(hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco')+
- (ascended?guide('¡Puerta abierta'+(alias?', '+alias:'')+'! Has subido al nivel '+levelNumber()+'.'):'')+
+ (opened?guide('¡Puerta abierta'+(alias?', '+alias:'')+'!'):'')+
+ (ascended?paragraph('✨ Has subido al nivel '+levelNumber()+'.'):'')+
+ (celebrate?parrotCelebration(selectedBlock,alias):'')+
  (praise?'<div class="panel achievement">'+paragraph(praise)+'</div>':'')+
  (mode==='final'?'<ul>'+blocks.map((name,i)=>'<li>'+escapeHtml(name)+' · '+results.filter(q=>q.block===i&&q.answer===q.right).length+'/5</li>').join('')+'</ul>':'')+
  results.map(q=>'<details class="panel '+answerStatus(q.answer,q.right)+'" '+(q.answer!==q.right?'open':'')+'><summary>'+
@@ -1406,16 +1544,16 @@ function finish(){
  (mode==='review'?button('Volver a mis fallos','review()',true):button('Volver al Tema 1','studyTopic()',true)));
 }
 function progressPage(){
- const total=field=>history.reduce((sum,item)=>sum+item[field],0);
+ const total=field=>history.filter(item=>item.mode!=='official').reduce((sum,item)=>sum+item[field],0);
  const attempted=total('hits')+total('misses');
- render(back+heading('Mi progreso')+paragraph(total('hits')+' aciertos · '+total('misses')+' fallos · '+total('blanks')+' en blanco')+
+ render(back+heading('Mi progreso')+experiencePanel()+paragraph(total('hits')+' aciertos · '+total('misses')+' fallos · '+total('blanks')+' en blanco')+
  paragraph(attempted?Math.round(total('hits')*100/attempted)+' % de acierto en las preguntas respondidas':'Aún no hay intentos registrados.')+
  '<h2>Bloques</h2>'+blocks.map((name,i)=>{
   const seen=new Set(history.flatMap(item=>item.results.filter(q=>(q.block??item.block??0)===i&&q.answer!==null).map(q=>q.id)));
   const available=questionsFor(i);
   const covered=available.filter(q=>seen.has(q.id)||seen.has(q.id+'-art')).length;
   return '<div class="panel"><strong>'+escapeHtml(name)+'</strong>'+paragraph(covered+' de '+available.length+' fichas de contenido practicadas · '+(hasAscended(i)?'Puerta abierta':'Ascenso pendiente'))+'</div>';
- }).join('')+'<h2>Historial</h2>'+history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(modeNames[item.mode]??item.mode)+' · '+item.hits+'/'+item.results.length+'</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join('')+
+ }).join('')+'<h2>Historial</h2>'+history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(modeNames[item.mode]??item.mode)+' · '+(item.mode==='official'?escapeHtml(item.exam)+(item.approved?' · Aprobado':' · No aprobado'):item.hits+'/'+item.results.length)+'</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join('')+
  '<small>'+ (account?'El progreso de tu cuenta se sincroniza con Firebase.':'El progreso de invitado se guarda en este navegador.') +'</small>');
 }
 function pendingMistakes(){
@@ -1435,11 +1573,11 @@ function startReview(){
  const failed=pendingMistakes();
  if(!failed.length)return;
  const ids=shuffle(failed).slice(0,20);
- const catalog=[...blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5),...writtenItems(i),...matchingItems(i)])];
+ const catalog=allPracticeItems();
  mode='review';
  begin(ids.map(miss=>{
   const q=catalog.find(item=>item.id===miss.id);
-  return {...q,prompt:q?.prompts?shuffle(q.prompts)[0]:miss.prompt};
+  return {...q,prompt:q?.trap?q.prompt:q?.prompts?shuffle(q.prompts)[0]:miss.prompt};
  }).filter(q=>q.right));
 }
 const firebaseConfig = {
