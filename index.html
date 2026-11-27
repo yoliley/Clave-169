@@ -27,6 +27,7 @@ button.review-action{background:#fff0ee;border-color:#e9b9b3;color:#8f3630}
 button.game-action{background:#fff0b8;border-color:#e9ca67;color:#694b00}
 button.account-action{background:#e9f0ff;border-color:#b3c8f4;color:#254e91;font-weight:700}
 .achievement p{color:inherit;margin:0;font-weight:700}
+.match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.match-grid section{min-width:0}.match-grid button{overflow-wrap:anywhere}
 </style>
 <header><strong class="brand"><img src="./clave-169-icon.png" width="36" height="36" alt="">CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
@@ -1097,7 +1098,7 @@ function studyTopic(){
  blocks.map((name,i)=>details(formatBlock(i),
  '<div class="door-state '+(hasAscended(i)?'door-open':'')+'"><span class="door-icon" aria-hidden="true"></span>'+(hasAscended(i)?'Puerta abierta':'Puerta por abrir')+(played[i]?' · Juego completado':'')+'</div>'+
  button('Leer','reading('+i+')')+button('Tarjetas didácticas','startCards('+i+')')+
- button('Jugar','startGame('+i+')',false,'game-action')+button('Rellenar huecos','startWritten('+i+')',false,'game-action')+button('Test','modes('+i+')'))).join('')+
+ button('Jugar','startGame('+i+')',false,'game-action')+button('Rellenar huecos','startWritten('+i+')',false,'game-action')+button('Une las frases','startMatching('+i+')',false,'game-action')+button('Test','modes('+i+')'))).join('')+
  '<section class="panel"><h2>La puerta final</h2>'+paragraph(doorsOpen()?'35 retos, cinco por bloque. Necesitas 32 aciertos para el ascenso final.':'Abre las siete puertas para desbloquear los 35 retos del Tema 1.')+
  (doorsOpen()?button(finalPassed()?'Repetir reto final':'Empezar reto final','startFinal()',false,'game-action'):'')+'</section>');
 }
@@ -1257,24 +1258,74 @@ const writtenPrompts=[
  [['El recurso de amparo se interpone ante el Tribunal ___.','Constitucional'],['El Defensor del Pueblo es designado por las Cortes ___.','Generales'],['El estado de sitio requiere mayoría ___ del Congreso.','absoluta']],
  [['El Rey sanciona y ___ las leyes.','promulga'],['La ley no puede autorizar indultos ___.','generales'],['El Rey nombra y releva libremente a los miembros civiles y militares de su ___.','Casa']]
 ];
+const gapDistractors=[
+ [['30','27','29'],['8','12','16'],['26','28','29'],['27','30','31']],
+ [['nacimiento extranjero','adopción','residencia'],['autonómicas','generales','europeas'],['jerarquía','reciprocidad','preferencia']],
+ [['iuris','civile','sapiens'],['posterior','judicial','parlamentaria'],['privada','voluntaria','selectiva']],
+ [['posesión','donación','ocupación'],['consultiva','orientativa','provisional'],['subsistencia','trueque','planificación central']],
+ [['jubilación','nacimiento','emigración'],['ocultar','repartir','ignorar'],['urbanización','construcción','planificación']],
+ [['Supremo','de Cuentas','Superior de Justicia'],['Regionales','Municipales','Provinciales'],['simple','de dos tercios','de tres quintos']],
+ [['deroga','vota','redacta'],['particulares','individuales','judiciales'],['Administración','Cámara','Guardia']]
+];
 function writtenItems(block){
- const [prompt,right,,note]=fills[block];
- return [{prompt,right,note},...writtenPrompts[block].map(([prompt,right])=>({prompt,right,note:prompt.replace('___',right)}))]
-  .map((q,i)=>({...q,id:'escrito-'+block+'-'+i,block,written:true}));
+ const [prompt,right,wrong,note]=fills[block];
+ return [{prompt,right,wrong,note},...writtenPrompts[block].map(([prompt,right],i)=>({prompt,right,wrong:gapDistractors[block][i],note:prompt.replace('___',right)}))]
+  .map((q,i)=>({...q,id:'escrito-'+block+'-'+i,block}));
 }
 function startWritten(block){
  selectedBlock=block;mode='written';begin(shuffle(writtenItems(block)));
 }
-function normalizeWord(word){
- return word.trim().toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const phrasePairs=[
+ [['Aprobación por las Cortes','31 de octubre de 1978'],['Ratificación en referéndum','6 de diciembre de 1978'],['Sanción por el Rey','27 de diciembre de 1978'],['Publicación en el BOE','29 de diciembre de 1978']],
+ [['Dignidad de la persona','Artículo 10'],['Nacionalidad española','Artículo 11'],['Mayoría de edad','Artículo 12'],['Igualdad ante la ley','Artículo 14']],
+ [['La enseñanza básica es…','…obligatoria y gratuita.'],['Una reunión pacífica y sin armas…','…no necesita autorización previa.'],['Las asociaciones secretas…','…están prohibidas.'],['La detención preventiva…','…tiene un máximo constitucional de 72 horas.']],
+ [['Defensa de España','Artículo 30'],['Contribución a los gastos públicos','Artículo 31'],['Propiedad privada y herencia','Artículo 33'],['Libertad de empresa','Artículo 38']],
+ [['Protección de la familia','Artículo 39'],['Seguridad Social','Artículo 41'],['Protección de la salud','Artículo 43'],['Vivienda digna','Artículo 47']],
+ [['El recurso de amparo se interpone…','…ante el Tribunal Constitucional.'],['El Defensor del Pueblo es designado…','…por las Cortes Generales.'],['El estado de alarma lo declara…','…el Gobierno.'],['El estado de sitio lo declara…','…el Congreso por mayoría absoluta.']],
+ [['El Rey es…','…el jefe del Estado.'],['Las leyes las sanciona y promulga…','…el Rey.'],['De los actos del Rey responden…','…quienes los refrendan.'],['Los indultos generales…','…no pueden autorizarse por ley.']]
+];
+function matchingItems(block){
+ const pairs=phrasePairs[block];
+ return pairs.map(([left,right],i)=>({
+  id:'union-'+block+'-'+i,block,left,prompt:'Une: '+left,right,
+  wrong:pairs.filter((_,j)=>j!==i).map(pair=>pair[1]),
+  note:left+' → '+right
+ }));
 }
-function submitWritten(event){
- event.preventDefault();
- const value=event.currentTarget.elements.word.value.trim();
- if(!value)return;
- const right=test[cursor].right;
- answers[cursor]=normalizeWord(value)===normalizeWord(right)?right:value;
- check();
+let matchLeft=-1,matchRight=[],matchFeedback='';
+function startMatching(block){
+ selectedBlock=block;
+ mode='matching';
+ test=shuffle(matchingItems(block));
+ answers=Array(test.length).fill(null);
+ matchRight=shuffle(test.map(q=>q.right));
+ matchLeft=-1;
+ matchFeedback='';
+ matchingBoard();
+}
+function matchingBoard(){
+ render(topicBack+heading('Une las frases')+guide('Toca una frase y luego su final, su fecha o su artículo.')+
+ '<div class="match-grid"><section aria-label="Frases">'+test.map((q,i)=>
+ '<button type="button" aria-pressed="'+(matchLeft===i)+'" '+(answers[i]!==null?'disabled':'')+' onclick="pickPhrase('+i+')">'+escapeHtml(q.left)+'</button>').join('')+
+ '</section><section aria-label="Parejas">'+matchRight.map((answer,i)=>
+ '<button type="button" '+(matchLeft<0||answers.includes(answer)?'disabled':'')+' onclick="joinPhrase('+i+')">'+escapeHtml(answer)+'</button>').join('')+
+ '</section></div>'+matchFeedback+
+ (answers.every(answer=>answer!==null)?button('Ver resultado','finish()',true):''));
+}
+function pickPhrase(i){
+ if(answers[i]!==null)return;
+ matchLeft=i;
+ matchingBoard();
+}
+function joinPhrase(i){
+ if(matchLeft<0||answers.includes(matchRight[i]))return;
+ const question=test[matchLeft];
+ const chosen=matchRight[i];
+ answers[matchLeft]=chosen;
+ matchLeft=-1;
+ matchFeedback='<div class="panel feedback '+answerStatus(chosen,question.right)+'" role="status">'+
+ paragraph(chosen===question.right?'¡Correcto!':'La pareja correcta es '+question.right)+paragraph(question.note)+'</div>';
+ matchingBoard();
 }
 function startGame(block){selectedBlock=block;mode='game';begin(gameItems(block,8));}
 function startFinal(){if(!doorsOpen())return;mode='final';begin(shuffle(blocks.flatMap((_,i)=>gameItems(i,5))));}
@@ -1294,12 +1345,10 @@ function question(){
   return '<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected||position>=0)+'" '+(checked||position>=0?'disabled':'')+' onclick="selectAnswer('+i+')">'+(position>=0?(position+1)+'. ':'')+escapeHtml(option)+'</button>';
  }).join('');
  render(button('Salir del intento',"if(confirm('¿Salir de este intento?'))home()")+
- (game?guide(q.written?'Escribe la palabra o el número que falta.':order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
+ (game?guide(mode==='written'?'Elige la palabra o el número que falta.':order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
  '<small>'+escapeHtml(formatBlock(q.block??selectedBlock))+' · '+(cursor+1)+' de '+test.length+'</small>'+
  '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+escapeHtml(q.prompt)+'</h2>'+
- (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+(q.written
-  ?(checked?(selected===null?'':paragraph('Tu respuesta · '+selected)):'<form onsubmit="submitWritten(event)"><label>Tu respuesta<input name="word" required maxlength="80" autocomplete="off"></label><button class="primary" type="submit">Comprobar</button></form>')
-  :options)+
+ (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+options+
  (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+escapeHtml(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong>'+paragraph(q.note)+'</div>':'')+
  (!checked&&(sequence.length||(!instant&&selected!==null))?button(order?'Reiniciar orden':'Quitar respuesta','clearAnswer()'):'')+
  (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
@@ -1324,7 +1373,7 @@ function move(delta){
  sequence=test[cursor].steps&&answers[cursor]!==null?answers[cursor].split(' → '):[];
  question();
 }
-const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',written:'Rellenar huecos',review:'Repaso'};
+const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',written:'Rellenar huecos',matching:'Une las frases',review:'Repaso'};
 function finish(){
  const results=test.map((q,i)=>({id:q.id,block:q.block,prompt:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
  const hits=results.filter(q=>q.answer===q.right).length;
@@ -1386,7 +1435,7 @@ function startReview(){
  const failed=pendingMistakes();
  if(!failed.length)return;
  const ids=shuffle(failed).slice(0,20);
- const catalog=[...blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5),...writtenItems(i)])];
+ const catalog=[...blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5),...writtenItems(i),...matchingItems(i)])];
  mode='review';
  begin(ids.map(miss=>{
   const q=catalog.find(item=>item.id===miss.id);
