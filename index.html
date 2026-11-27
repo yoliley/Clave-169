@@ -13,6 +13,8 @@
 .correct p,.correct small,.incorrect p,.incorrect small{color:inherit}
 button.correct:disabled,button.incorrect:disabled{opacity:1}
 .brand{display:flex;align-items:center;gap:10px}.brand img{display:block;width:36px;height:36px;border-radius:9px}
+.guide{display:flex;align-items:center;gap:14px;background:#e4f5ff;border:1px solid #a9d3ee;border-radius:16px;padding:14px;margin:14px 0}.guide img{flex:none;border-radius:12px}.guide p{margin:3px 0}.door-state{margin:10px 0;color:#175b8a;font-weight:700}.flash{min-height:160px}.lines{white-space:pre-line}
+.door-state{display:flex;align-items:center;gap:10px}.door-icon{display:inline-block;flex:none;width:18px;height:25px;border:2px solid #2673a6;border-radius:4px 4px 1px 1px;background:radial-gradient(circle at 75% 55%,#2673a6 0 1px,transparent 2px),#deeffb}.door-open .door-icon{border-color:#388354;transform:perspective(32px) rotateY(-27deg);background:#d3f2de}.door-open{color:#166534}
 </style>
 <header><strong class="brand"><img src="./clave-169-icon.png" width="36" height="36" alt="">CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
@@ -100,7 +102,938 @@ const pool=[
  ...bank.map(([prompt,right,wrong,topic],i)=>({id:i,prompts:[easyPreamble[i],prompt],right,wrong,note:'Preámbulo · '+cards[topic][1]})),
  ...extra.map(([a,b,right,wrong,note,source],i)=>({id:bank.length+i,prompts:[easyExtra[i],a,b],right,wrong,note:source+' · '+note}))
 ];
-let test=[],answers=[],cursor=0,mode='',checked=false,previous={};
+const facts=[
+ [
+  2,
+  "10.1",
+  "¿Qué se considera fundamento del orden político y de la paz social?",
+  "La dignidad de la persona, sus derechos inviolables, el libre desarrollo de la personalidad y el respeto a la ley y a los derechos ajenos"
+ ],
+ [
+  2,
+  "10.2",
+  "¿Con qué se interpretan las normas sobre derechos fundamentales?",
+  "Con la Declaración Universal de Derechos Humanos y los tratados y acuerdos ratificados por España sobre esas materias"
+ ],
+ [
+  2,
+  "11.1",
+  "¿Qué regula la adquisición, conservación y pérdida de la nacionalidad española?",
+  "La ley"
+ ],
+ [
+  2,
+  "11.2",
+  "¿A quién no se puede privar de su nacionalidad española?",
+  "A ningún español de origen"
+ ],
+ [
+  2,
+  "11.3",
+  "¿Con quién puede concertar España tratados de doble nacionalidad?",
+  "Con países iberoamericanos o con los que hayan tenido o tengan una vinculación particular con España"
+ ],
+ [
+  2,
+  "11.3",
+  "¿Qué pueden conservar los españoles al naturalizarse en esos países, incluso sin reciprocidad?",
+  "La nacionalidad española de origen"
+ ],
+ [
+  2,
+  "12",
+  "¿A qué edad son mayores de edad los españoles?",
+  "A los 18 años"
+ ],
+ [
+  2,
+  "13.1",
+  "¿Cómo disfrutan los extranjeros de las libertades públicas del Título I?",
+  "En los términos que establezcan los tratados y la ley"
+ ],
+ [
+  2,
+  "13.2",
+  "¿Qué excepción permite reconocer a extranjeros derechos del artículo 23?",
+  "Sufragio activo y pasivo en elecciones municipales por tratado o ley, atendiendo a la reciprocidad"
+ ],
+ [
+  2,
+  "13.3",
+  "¿Cuándo se concede la extradición?",
+  "En cumplimiento de un tratado o de la ley y atendiendo a la reciprocidad"
+ ],
+ [
+  2,
+  "13.3",
+  "¿Qué delitos se excluyen de la extradición?",
+  "Los políticos, aunque los actos de terrorismo no se consideran políticos a estos efectos"
+ ],
+ [
+  2,
+  "13.4",
+  "¿Quién establece los términos del derecho de asilo de extranjeros y apátridas?",
+  "La ley"
+ ],
+ [
+  2,
+  "14",
+  "¿Qué principio impide discriminar por nacimiento, raza, sexo, religión, opinión u otra condición personal o social?",
+  "La igualdad ante la ley"
+ ],
+ [
+  3,
+  "15",
+  "¿Qué protege el artículo 15 además de la vida?",
+  "La integridad física y moral"
+ ],
+ [
+  3,
+  "15",
+  "¿Qué trato prohíbe el artículo 15?",
+  "La tortura y las penas o tratos inhumanos o degradantes"
+ ],
+ [
+  3,
+  "15",
+  "¿Qué salvedad contiene la redacción del artículo 15 al abolir la pena de muerte?",
+  "Lo que pudieran disponer las leyes penales militares para tiempos de guerra"
+ ],
+ [
+  3,
+  "16.1",
+  "¿Qué limita las manifestaciones de la libertad ideológica, religiosa y de culto?",
+  "El mantenimiento del orden público protegido por la ley"
+ ],
+ [
+  3,
+  "16.2",
+  "¿Sobre qué se prohíbe obligar a declarar?",
+  "Sobre ideología, religión o creencias"
+ ],
+ [
+  3,
+  "16.3",
+  "¿Qué carácter tiene una confesión religiosa en el Estado español?",
+  "Ninguna confesión tiene carácter estatal"
+ ],
+ [
+  3,
+  "16.3",
+  "¿Con quién mantendrán relaciones de cooperación los poderes públicos en materia religiosa?",
+  "Con la Iglesia Católica y las demás confesiones"
+ ],
+ [
+  3,
+  "17.1",
+  "¿En qué condiciones cabe privar a alguien de libertad?",
+  "En los casos y en la forma previstos en la ley, observando lo establecido en el artículo 17"
+ ],
+ [
+  3,
+  "17.2",
+  "¿Cuál es el límite máximo constitucional de la detención preventiva?",
+  "72 horas, aunque solo puede durar el tiempo estrictamente necesario"
+ ],
+ [
+  3,
+  "17.2",
+  "¿Qué debe pasar al agotarse ese plazo?",
+  "La persona detenida queda en libertad o a disposición judicial"
+ ],
+ [
+  3,
+  "17.3",
+  "¿Qué garantías tiene una persona detenida al ser informada y declarar?",
+  "Información inmediata y comprensible de sus derechos y motivos, y derecho a no ser obligada a declarar"
+ ],
+ [
+  3,
+  "17.3",
+  "¿Qué asistencia se garantiza a la persona detenida?",
+  "Asistencia de abogado en las diligencias policiales y judiciales en los términos de la ley"
+ ],
+ [
+  3,
+  "17.4",
+  "¿Para qué sirve el procedimiento de habeas corpus?",
+  "Para poner inmediatamente ante la autoridad judicial a quien esté detenido ilegalmente"
+ ],
+ [
+  3,
+  "17.4",
+  "¿Qué norma determina el plazo máximo de la prisión provisional?",
+  "La ley"
+ ],
+ [
+  3,
+  "18.1",
+  "¿Qué tres derechos reúne el artículo 18.1?",
+  "Honor, intimidad personal y familiar y propia imagen"
+ ],
+ [
+  3,
+  "18.2",
+  "¿Qué permite entrar o registrar un domicilio?",
+  "Consentimiento del titular o resolución judicial, salvo delito flagrante"
+ ],
+ [
+  3,
+  "18.3",
+  "¿Qué excepción permite levantar el secreto de las comunicaciones?",
+  "Una resolución judicial"
+ ],
+ [
+  3,
+  "18.4",
+  "¿Para qué limita la ley el uso de la informática?",
+  "Para garantizar el honor, la intimidad y el pleno ejercicio de los derechos"
+ ],
+ [
+  3,
+  "19",
+  "¿Qué libertades de desplazamiento reconoce a los españoles el artículo 19?",
+  "Elegir residencia, circular por España y entrar y salir de España en los términos de la ley"
+ ],
+ [
+  3,
+  "19",
+  "¿Por qué motivos no puede limitarse la entrada y salida de España?",
+  "Por motivos políticos o ideológicos"
+ ],
+ [
+  3,
+  "20.1",
+  "¿Qué libertades incluye el artículo 20.1?",
+  "Expresión y difusión, producción y creación, libertad de cátedra e información veraz"
+ ],
+ [
+  3,
+  "20.1.d",
+  "¿Qué dos garantías regula la ley en relación con la libertad de información?",
+  "La cláusula de conciencia y el secreto profesional"
+ ],
+ [
+  3,
+  "20.2",
+  "¿Qué se prohíbe para restringir el ejercicio de estas libertades?",
+  "La censura previa"
+ ],
+ [
+  3,
+  "20.3",
+  "¿Qué regula la ley para los medios dependientes del Estado o de entes públicos?",
+  "Su organización y control parlamentario, garantizando acceso a grupos significativos y respetando el pluralismo"
+ ],
+ [
+  3,
+  "20.4",
+  "¿Qué límites destaca la Constitución para la libertad de expresión e información?",
+  "Honor, intimidad, propia imagen y protección de la juventud y la infancia"
+ ],
+ [
+  3,
+  "20.5",
+  "¿Qué se exige para secuestrar publicaciones, grabaciones u otros medios de información?",
+  "Una resolución judicial"
+ ],
+ [
+  3,
+  "21.1",
+  "¿Qué requisito de autorización tiene una reunión pacífica y sin armas?",
+  "Ninguno: no necesita autorización previa"
+ ],
+ [
+  3,
+  "21.2",
+  "¿Qué se exige en reuniones en lugares de tránsito público y manifestaciones?",
+  "Comunicación previa a la autoridad"
+ ],
+ [
+  3,
+  "21.2",
+  "¿Cuándo puede prohibirse una de esas reuniones o manifestaciones?",
+  "Si hay razones fundadas de alteración del orden público con peligro para personas o bienes"
+ ],
+ [
+  3,
+  "22.2",
+  "¿Qué asociaciones son ilegales?",
+  "Las que persigan fines o utilicen medios tipificados como delito"
+ ],
+ [
+  3,
+  "22.3",
+  "¿Para qué se inscriben las asociaciones en el registro?",
+  "Solo a efectos de publicidad"
+ ],
+ [
+  3,
+  "22.4",
+  "¿Cuándo cabe disolver o suspender una asociación?",
+  "Por resolución judicial motivada"
+ ],
+ [
+  3,
+  "22.5",
+  "¿Qué asociaciones se prohíben expresamente?",
+  "Las secretas y las de carácter paramilitar"
+ ],
+ [
+  3,
+  "23.1",
+  "¿Cómo pueden participar los ciudadanos en asuntos públicos?",
+  "Directamente o por representantes elegidos libremente en elecciones periódicas por sufragio universal"
+ ],
+ [
+  3,
+  "23.2",
+  "¿Cómo se accede a funciones y cargos públicos?",
+  "En condiciones de igualdad y con los requisitos que señalen las leyes"
+ ],
+ [
+  3,
+  "24.1",
+  "¿Qué derecho protege frente a la indefensión?",
+  "La tutela judicial efectiva de jueces y tribunales"
+ ],
+ [
+  3,
+  "24.2",
+  "¿Qué garantías recoge el artículo 24.2 para la defensa?",
+  "Juez ordinario predeterminado por ley, abogado, información de la acusación, proceso público sin dilaciones indebidas y prueba pertinente"
+ ],
+ [
+  3,
+  "24.2",
+  "¿Qué garantías tiene una persona respecto a su propia culpabilidad?",
+  "No declarar contra sí misma, no confesarse culpable y presunción de inocencia"
+ ],
+ [
+  3,
+  "24.2",
+  "¿En qué supuestos puede la ley dispensar de declarar sobre hechos presuntamente delictivos?",
+  "Por parentesco o secreto profesional"
+ ],
+ [
+  3,
+  "25.1",
+  "¿Cuándo puede sancionarse una acción u omisión según el principio de legalidad?",
+  "Cuando ya constituía delito, falta o infracción administrativa según la legislación vigente al producirse"
+ ],
+ [
+  3,
+  "25.2",
+  "¿A qué se orientan las penas privativas de libertad y las medidas de seguridad?",
+  "A la reeducación y reinserción social, sin trabajos forzados"
+ ],
+ [
+  3,
+  "25.2",
+  "¿Qué derechos conserva quien cumple pena de prisión?",
+  "Los del capítulo, salvo límites del fallo, sentido de la pena y ley penitenciaria, además de trabajo remunerado, Seguridad Social, cultura y desarrollo personal"
+ ],
+ [
+  3,
+  "25.3",
+  "¿Puede imponer privación de libertad la Administración civil?",
+  "No, ni directa ni subsidiariamente"
+ ],
+ [
+  3,
+  "26",
+  "¿Dónde se prohíben los Tribunales de Honor?",
+  "En la Administración civil y en las organizaciones profesionales"
+ ],
+ [
+  3,
+  "27.1–3",
+  "¿Cuál es el objeto de la educación y qué garantía tienen los padres?",
+  "El pleno desarrollo de la personalidad respetando principios democráticos y derechos; los padres pueden elegir formación religiosa y moral conforme a sus convicciones"
+ ],
+ [
+  3,
+  "27.4",
+  "¿Cómo es la enseñanza básica?",
+  "Obligatoria y gratuita"
+ ],
+ [
+  3,
+  "27.5–6",
+  "¿Cómo garantizan los poderes públicos el derecho a la educación y qué libertad se reconoce?",
+  "Mediante programación general, participación y creación de centros; se reconoce la libertad de crear centros dentro de los principios constitucionales"
+ ],
+ [
+  3,
+  "27.7–9",
+  "¿Qué prevé el artículo 27 para los centros docentes?",
+  "Participación en el control y gestión de los sostenidos con fondos públicos, inspección y homologación, y ayuda a los que reúnan requisitos legales"
+ ],
+ [
+  3,
+  "27.10",
+  "¿Qué autonomía reconoce la Constitución en educación?",
+  "La autonomía de las universidades en los términos de la ley"
+ ],
+ [
+  3,
+  "28.1",
+  "¿Qué incluye la libertad sindical?",
+  "Fundar sindicatos, afiliarse al elegido y que los sindicatos formen confederaciones y organizaciones internacionales o se afilien a ellas; nadie puede ser obligado a afiliarse"
+ ],
+ [
+  3,
+  "28.1",
+  "¿Qué peculiaridades puede establecer la ley para la sindicación?",
+  "Limitar o exceptuar a fuerzas o institutos armados y cuerpos bajo disciplina militar, y regular las peculiaridades para funcionarios"
+ ],
+ [
+  3,
+  "28.2",
+  "¿Quién tiene derecho a la huelga constitucional y con qué finalidad?",
+  "Los trabajadores para defender sus intereses, garantizando el mantenimiento de los servicios esenciales de la comunidad"
+ ],
+ [
+  3,
+  "29",
+  "¿Cómo se ejerce el derecho de petición?",
+  "Por escrito, individual o colectivamente; los miembros de cuerpos sujetos a disciplina militar solo individualmente según su legislación"
+ ],
+ [
+  4,
+  "30.1",
+  "¿Quiénes tienen el derecho y el deber de defender España?",
+  "Los españoles"
+ ],
+ [
+  4,
+  "30.2",
+  "¿Qué puede establecer la ley respecto de la objeción de conciencia?",
+  "Regularla junto a otras causas de exención del servicio militar obligatorio y, en su caso, imponer una prestación social sustitutoria"
+ ],
+ [
+  4,
+  "30.3–4",
+  "¿Qué puede establecerse para fines de interés general o ante una grave emergencia?",
+  "Un servicio civil para fines de interés general y deberes por ley en grave riesgo, catástrofe o calamidad pública"
+ ],
+ [
+  4,
+  "31.1",
+  "¿Cómo deben contribuir todos a los gastos públicos?",
+  "Según su capacidad económica, mediante un sistema justo inspirado en igualdad y progresividad, sin alcance confiscatorio"
+ ],
+ [
+  4,
+  "31.2–3",
+  "¿Qué reglas se aplican al gasto público y a las prestaciones públicas?",
+  "Asignación equitativa y programación y ejecución con eficiencia y economía; prestaciones personales o patrimoniales públicas solo con arreglo a la ley"
+ ],
+ [
+  4,
+  "32",
+  "¿Qué reconoce la Constitución sobre el matrimonio?",
+  "Derecho a contraerlo con plena igualdad jurídica; la ley regula formas, edad, capacidad, derechos, deberes, separación, disolución y efectos"
+ ],
+ [
+  4,
+  "33",
+  "¿Qué delimita el contenido de la propiedad privada y la herencia?",
+  "Su función social, de acuerdo con las leyes"
+ ],
+ [
+  4,
+  "33.3",
+  "¿Qué se exige para privar a alguien de sus bienes o derechos?",
+  "Causa justificada de utilidad pública o interés social, indemnización y conformidad con las leyes"
+ ],
+ [
+  4,
+  "34",
+  "¿Para qué fines se reconoce el derecho de fundación?",
+  "Para fines de interés general, con arreglo a la ley y aplicando los apartados 2 y 4 del artículo 22"
+ ],
+ [
+  4,
+  "35",
+  "¿Qué comprende el derecho al trabajo?",
+  "Libre elección de profesión u oficio, promoción laboral y remuneración suficiente sin discriminación por sexo; la ley regula un estatuto de los trabajadores"
+ ],
+ [
+  4,
+  "36",
+  "¿Cómo han de funcionar internamente los colegios profesionales?",
+  "Con estructura y funcionamiento democráticos"
+ ],
+ [
+  4,
+  "37.1",
+  "¿Qué garantiza la ley sobre la negociación colectiva?",
+  "La negociación laboral entre representantes de trabajadores y empresarios y la fuerza vinculante de los convenios"
+ ],
+ [
+  4,
+  "37.2",
+  "¿Quién puede adoptar medidas de conflicto colectivo?",
+  "Trabajadores y empresarios, con garantías para el funcionamiento de los servicios esenciales"
+ ],
+ [
+  4,
+  "38",
+  "¿En qué marco se reconoce la libertad de empresa?",
+  "En la economía de mercado, conforme a la economía general y, en su caso, a la planificación"
+ ],
+ [
+  5,
+  "39",
+  "¿Qué protege el artículo 39?",
+  "A la familia, a los hijos con independencia de filiación y a las madres cualquiera sea su estado civil"
+ ],
+ [
+  5,
+  "39.2–4",
+  "¿Qué otras medidas prevé el artículo 39 para los hijos?",
+  "Investigación de la paternidad, asistencia de los padres y protección conforme a los acuerdos internacionales sobre sus derechos"
+ ],
+ [
+  5,
+  "40",
+  "¿Qué objetivos sociales y laborales recoge el artículo 40?",
+  "Progreso social y económico, distribución más equitativa, pleno empleo, formación, seguridad e higiene y descanso con jornada limitada y vacaciones retribuidas"
+ ],
+ [
+  5,
+  "41",
+  "¿Qué debe garantizar el régimen público de Seguridad Social?",
+  "Asistencia y prestaciones suficientes ante necesidad, especialmente desempleo; la asistencia y prestaciones complementarias son libres"
+ ],
+ [
+  5,
+  "42",
+  "¿Qué debe hacer el Estado respecto de los trabajadores españoles en el extranjero?",
+  "Velar por sus derechos económicos y sociales y orientar su política hacia el retorno"
+ ],
+ [
+  5,
+  "43",
+  "¿Qué medidas incluye la protección de la salud?",
+  "Medidas preventivas, prestaciones y servicios; se fomentan educación sanitaria, educación física, deporte y uso adecuado del ocio"
+ ],
+ [
+  5,
+  "44",
+  "¿Qué deben promover y tutelar los poderes públicos en el artículo 44?",
+  "El acceso a la cultura y la promoción de la ciencia e investigación en beneficio del interés general"
+ ],
+ [
+  5,
+  "45",
+  "¿Qué combina el derecho al medio ambiente?",
+  "Disfrute y deber de conservarlo, uso racional de recursos, sanciones y obligación de reparar el daño"
+ ],
+ [
+  5,
+  "46",
+  "¿Qué se garantiza respecto al patrimonio histórico, cultural y artístico?",
+  "Su conservación y enriquecimiento cualquiera que sea su régimen jurídico y titularidad; la ley penal sanciona los atentados"
+ ],
+ [
+  5,
+  "47",
+  "¿Qué pide el artículo 47 para hacer efectivo el derecho a vivienda digna?",
+  "Regular el suelo en interés general para impedir la especulación y que la comunidad participe en las plusvalías urbanísticas públicas"
+ ],
+ [
+  5,
+  "48",
+  "¿Qué participación se promueve para la juventud?",
+  "Libre y eficaz en el desarrollo político, social, económico y cultural"
+ ],
+ [
+  5,
+  "49",
+  "¿Qué deben impulsar los poderes públicos para las personas con discapacidad?",
+  "Autonomía personal e inclusión en entornos accesibles, participación de sus organizaciones y atención particular a mujeres y menores con discapacidad"
+ ],
+ [
+  5,
+  "49.1",
+  "¿Cómo ejercen los derechos del Título I las personas con discapacidad?",
+  "En condiciones de libertad e igualdad reales y efectivas, con la protección especial que regule la ley"
+ ],
+ [
+  5,
+  "50",
+  "¿Cómo se protege el bienestar en la tercera edad?",
+  "Con pensiones adecuadas y periódicamente actualizadas y servicios sociales para salud, vivienda, cultura y ocio"
+ ],
+ [
+  5,
+  "51",
+  "¿Qué se protege en la defensa de consumidores y usuarios?",
+  "Seguridad, salud e intereses económicos legítimos; también información, educación y participación de sus organizaciones"
+ ],
+ [
+  5,
+  "51.3",
+  "¿Qué regula la ley sobre productos comerciales?",
+  "El comercio interior y el régimen de autorización de productos comerciales"
+ ],
+ [
+  5,
+  "52",
+  "¿Cómo funcionan las organizaciones profesionales que defienden intereses económicos propios?",
+  "Con estructura interna y funcionamiento democráticos"
+ ],
+ [
+  6,
+  "53.1",
+  "¿A quién vinculan los derechos y libertades del capítulo segundo?",
+  "A todos los poderes públicos"
+ ],
+ [
+  6,
+  "53.1",
+  "¿Cómo se regula el ejercicio de esos derechos y qué debe respetarse?",
+  "Solo por ley, que debe respetar su contenido esencial"
+ ],
+ [
+  6,
+  "53.1",
+  "¿Qué vía permite controlar constitucionalmente las leyes que afecten a estos derechos?",
+  "El recurso de inconstitucionalidad conforme al artículo 161.1.a"
+ ],
+ [
+  6,
+  "53.2",
+  "¿Para qué derechos prevé tutela preferente y sumaria ante los tribunales ordinarios?",
+  "Para el artículo 14 y los artículos 15 a 29"
+ ],
+ [
+  6,
+  "53.2",
+  "¿A qué derecho del artículo 30 se extiende expresamente el amparo?",
+  "A la objeción de conciencia"
+ ],
+ [
+  6,
+  "53.3",
+  "¿Qué papel tienen los principios rectores del capítulo tercero?",
+  "Informan la legislación, la práctica judicial y la actuación pública; se alegan ante la jurisdicción ordinaria según sus leyes de desarrollo"
+ ],
+ [
+  6,
+  "54",
+  "¿Quién designa al Defensor del Pueblo?",
+  "Las Cortes Generales"
+ ],
+ [
+  6,
+  "54",
+  "¿Qué puede hacer el Defensor del Pueblo para defender los derechos del Título I?",
+  "Supervisar la actividad de la Administración y dar cuenta a las Cortes Generales"
+ ],
+ [
+  6,
+  "55.1",
+  "¿En qué estados puede darse suspensión general de derechos?",
+  "En excepción o sitio"
+ ],
+ [
+  6,
+  "55.1",
+  "¿Qué apartado del artículo 17 queda exceptuado de la suspensión en estado de excepción?",
+  "El 17.3, referido a garantías de la persona detenida"
+ ],
+ [
+  6,
+  "55.1",
+  "¿Qué derechos de intimidad pueden suspenderse en excepción o sitio?",
+  "Inviolabilidad del domicilio y secreto de las comunicaciones, artículos 18.2 y 18.3"
+ ],
+ [
+  6,
+  "55.1",
+  "¿Qué derechos del artículo 20 pueden suspenderse en excepción o sitio?",
+  "Expresión, información veraz y garantía judicial de secuestro de publicaciones: 20.1.a, 20.1.d y 20.5"
+ ],
+ [
+  6,
+  "55.1",
+  "¿Qué otros derechos pueden suspenderse en excepción o sitio?",
+  "Circulación y residencia, reunión, huelga y medidas de conflicto colectivo"
+ ],
+ [
+  6,
+  "55.2",
+  "¿Qué derechos admite suspender individualmente el artículo 55.2?",
+  "Detención preventiva, inviolabilidad del domicilio y secreto de las comunicaciones: 17.2, 18.2 y 18.3"
+ ],
+ [
+  6,
+  "55.2",
+  "¿Qué exige la suspensión individual y en qué investigaciones cabe?",
+  "Ley orgánica, intervención judicial y control parlamentario en investigaciones sobre bandas armadas o elementos terroristas"
+ ],
+ [
+  6,
+  "55.2",
+  "¿Qué consecuencia tiene el uso injustificado o abusivo de esas facultades?",
+  "Responsabilidad penal"
+ ],
+ [
+  6,
+  "116.2",
+  "¿Quién declara la alarma y por cuánto tiempo?",
+  "El Gobierno por un máximo inicial de 15 días, dando cuenta al Congreso; la prórroga requiere autorización del Congreso"
+ ],
+ [
+  6,
+  "116.3",
+  "¿Quién declara la excepción y cuál es su plazo?",
+  "El Gobierno con autorización previa del Congreso, hasta 30 días prorrogables por otros 30 con los mismos requisitos"
+ ],
+ [
+  6,
+  "116.4",
+  "¿Quién declara el estado de sitio?",
+  "El Congreso por mayoría absoluta, a propuesta exclusiva del Gobierno, fijando territorio, duración y condiciones"
+ ],
+ [
+  6,
+  "55 y 116",
+  "¿Suspende derechos el estado de alarma según el régimen del artículo 55?",
+  "No: la suspensión general se prevé para excepción y sitio"
+ ],
+ [
+  6,
+  "55 y 116",
+  "¿Qué escenarios ilustran los tres estados en el PDF?",
+  "Alarma ante catástrofes; excepción ante graves alteraciones del orden público; sitio ante peligros graves para el Estado como una sublevación"
+ ],
+ [
+  6,
+  "81.1",
+  "¿Con qué tipo de ley se desarrollan los derechos fundamentales y libertades públicas de la sección primera?",
+  "Con ley orgánica"
+ ],
+ [
+  7,
+  "56.1",
+  "¿Qué posición tiene el Rey?",
+  "Es jefe del Estado, símbolo de su unidad y permanencia"
+ ],
+ [
+  7,
+  "56.1",
+  "¿Qué papel desempeña el Rey respecto a instituciones y relaciones internacionales?",
+  "Arbitra y modera su funcionamiento regular y asume la más alta representación internacional, especialmente ante naciones de la comunidad histórica"
+ ],
+ [
+  7,
+  "56.2",
+  "¿Cuál es el título del Rey?",
+  "Rey de España, y puede utilizar los demás títulos de la Corona"
+ ],
+ [
+  7,
+  "56.3",
+  "¿Qué establece la Constitución sobre la responsabilidad de la persona del Rey?",
+  "Es inviolable y no está sujeta a responsabilidad"
+ ],
+ [
+  7,
+  "56.3",
+  "¿Cuándo carecen de validez los actos del Rey?",
+  "Si faltara el refrendo, salvo lo previsto en el artículo 65.2"
+ ],
+ [
+  7,
+  "62.a",
+  "¿Qué hace el Rey respecto a las leyes aprobadas?",
+  "Las sanciona y promulga"
+ ],
+ [
+  7,
+  "62.b–c",
+  "¿Qué convocatorias realiza el Rey?",
+  "Convoca y disuelve las Cortes y convoca elecciones y referéndum en los términos previstos por la Constitución"
+ ],
+ [
+  7,
+  "62.d",
+  "¿Qué hace el Rey respecto al presidente del Gobierno?",
+  "Propone al candidato y, en su caso, lo nombra y pone fin a sus funciones en los términos constitucionales"
+ ],
+ [
+  7,
+  "62.e",
+  "¿A propuesta de quién nombra o separa el Rey a los miembros del Gobierno?",
+  "Del presidente del Gobierno"
+ ],
+ [
+  7,
+  "62.f",
+  "¿Qué funciones ejerce el Rey sobre decretos, empleos y honores?",
+  "Expide decretos acordados por el Consejo de Ministros, confiere empleos civiles y militares y concede honores y distinciones conforme a las leyes"
+ ],
+ [
+  7,
+  "62.g",
+  "¿En qué condiciones puede el Rey presidir el Consejo de Ministros?",
+  "Para ser informado de asuntos de Estado, cuando lo estime oportuno, a petición del presidente del Gobierno"
+ ],
+ [
+  7,
+  "62.h",
+  "¿Quién ostenta el mando supremo de las Fuerzas Armadas?",
+  "El Rey"
+ ],
+ [
+  7,
+  "62.i",
+  "¿Qué límite tiene el derecho de gracia?",
+  "La ley no puede autorizar indultos generales"
+ ],
+ [
+  7,
+  "62.j",
+  "¿Sobre qué instituciones ejerce el Rey el Alto Patronazgo?",
+  "Las Reales Academias"
+ ],
+ [
+  7,
+  "63.1",
+  "¿Quién acredita a embajadores y representantes diplomáticos y ante quién se acreditan los extranjeros?",
+  "El Rey los acredita y ante él se acreditan los representantes extranjeros en España"
+ ],
+ [
+  7,
+  "63.2",
+  "¿Quién manifiesta el consentimiento del Estado para obligarse mediante tratados?",
+  "El Rey, de conformidad con la Constitución y las leyes"
+ ],
+ [
+  7,
+  "63.3",
+  "¿Qué se requiere para que el Rey declare la guerra o haga la paz?",
+  "Autorización previa de las Cortes Generales"
+ ],
+ [
+  7,
+  "64.1",
+  "¿Quién refrenda habitualmente los actos del Rey?",
+  "El presidente del Gobierno y, cuando corresponda, los ministros competentes"
+ ],
+ [
+  7,
+  "64.1",
+  "¿Quién refrenda la propuesta y nombramiento del presidente del Gobierno y la disolución del artículo 99?",
+  "El presidente del Congreso"
+ ],
+ [
+  7,
+  "64.2",
+  "¿Quién responde de los actos del Rey?",
+  "Quienes los refrendan"
+ ],
+ [
+  7,
+  "65.1",
+  "¿Cómo se financia la Familia y Casa del Rey según el artículo 65.1?",
+  "Con una cantidad global de los Presupuestos del Estado que el Rey distribuye libremente"
+ ],
+ [
+  7,
+  "65.2",
+  "¿Quién nombra y releva a los miembros civiles y militares de la Casa del Rey?",
+  "El Rey libremente"
+ ],
+ [
+  7,
+  "117.1",
+  "¿De quién emana la justicia y en nombre de quién se administra?",
+  "Emana del pueblo y se administra en nombre del Rey"
+ ],
+ [
+  7,
+  "123.2",
+  "¿Quién nombra al presidente del Tribunal Supremo y a propuesta de quién?",
+  "El Rey, a propuesta del Consejo General del Poder Judicial"
+ ],
+ [
+  7,
+  "159.1",
+  "¿Quién nombra a los miembros del Tribunal Constitucional?",
+  "El Rey, a propuesta del Congreso, el Senado, el Gobierno y el Consejo General del Poder Judicial en el reparto constitucional"
+ ],
+ [
+  7,
+  "160",
+  "¿Quién nombra al presidente del Tribunal Constitucional?",
+  "El Rey, a propuesta del propio Tribunal en pleno"
+ ],
+ [
+  7,
+  "122.3",
+  "¿Quién nombra a los miembros del Consejo General del Poder Judicial?",
+  "El Rey"
+ ],
+ [
+  7,
+  "124.4",
+  "¿Quién propone el nombramiento del fiscal general del Estado al Rey?",
+  "El Gobierno, oído el Consejo General del Poder Judicial"
+ ],
+ [
+  6,
+  "53.2",
+  "¿Ante qué órgano se presenta el recurso de amparo constitucional?",
+  "Ante el Tribunal Constitucional"
+ ],
+ [
+  6,
+  "54",
+  "¿Qué clase de ley regula al Defensor del Pueblo?",
+  "Una ley orgánica"
+ ],
+ [
+  6,
+  "116.1",
+  "¿Qué clase de ley regula los estados de alarma, excepción y sitio?",
+  "Una ley orgánica"
+ ],
+ [
+  4,
+  "35.1",
+  "¿Qué deber se menciona al reconocer el derecho al trabajo?",
+  "El deber de trabajar"
+ ],
+ [
+  3,
+  "22.1",
+  "¿Qué derecho se reconoce al comienzo del artículo 22?",
+  "El derecho de asociación"
+ ]
+];
+const blocks = [
+ 'Introducción a la Constitución','Dignidad, nacionalidad e igualdad',
+ 'Derechos fundamentales y libertades','Derechos y deberes de la ciudadanía',
+ 'Principios rectores','Garantías y suspensión de derechos','La Corona'
+];
+const boe='https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229';
+const titles=['Principios generales del Estado','Derechos y deberes fundamentales','La Corona','Las Cortes Generales','Gobierno y Administración','Relaciones entre Gobierno y Cortes','Poder Judicial','Economía y Hacienda','Organización territorial','Tribunal Constitucional','Reforma constitucional'];
+const factsByBlock=blocks.map((_,i)=>facts.filter(row=>row[0]===i+1));
+const formatBlock=i=>'Bloque '+(i+1)+' · '+blocks[i];
+const readStored=(suffix,fallback)=>{try{return JSON.parse(localStorage.getItem(key+suffix))??fallback;}catch{return fallback;}};
+function saveStored(suffix,value){try{localStorage.setItem(key+suffix,JSON.stringify(value));}catch{}}
+const memory=readStored('-tarjetas',{});
+const played=readStored('-juegos',{});
+const now=()=>Date.now();
+const duration=86400000;
+let selectedBlock=0,mode='',test=[],answers=[],cursor=0,checked=false,sequence=[],deck=[],cardPosition=0,flipped=false;
+const previous={};
+
 function shuffle(items){
  const copy=[...items];
  for(let i=copy.length-1;i>0;i--){
@@ -109,90 +1042,266 @@ function shuffle(items){
  }
  return copy;
 }
-function button(label,action,primary=false){return '<button class="'+(primary?'primary':'')+'" onclick="'+action+'">'+label+'</button>';}
+function escapeHtml(value){
+ return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function button(label,action,primary=false){
+ return '<button class="'+(primary?'primary':'')+'" onclick="'+action+'">'+escapeHtml(label)+'</button>';
+}
+function heading(text){return '<h1>'+escapeHtml(text)+'</h1>';}
+function details(title,body){return '<details class="panel"><summary>'+escapeHtml(title)+'</summary>'+body+'</details>';}
+function paragraph(text){return '<p>'+escapeHtml(text)+'</p>';}
 const back=button('Volver al inicio','home()');
+const topicBack=button('Volver al Tema 1','studyTopic()');
+function guide(message){
+ return '<div class="guide"><img src="./clave-169-icon.png" width="46" height="46" alt=""><div><strong>La Llave</strong>'+paragraph(message)+'</div></div>';
+}
+function hasAscended(block){
+ return history.some(item=>(item.mode==='ascenso'||(item.mode==='normal'&&item.block===undefined))&&(item.block??0)===block&&item.hits>=18);
+}
+const finalPassed=()=>history.some(item=>item.mode==='final'&&item.hits>=32);
+const doorsOpen=()=>blocks.every((_,i)=>hasAscended(i));
+function levelNumber(){return 1+blocks.filter((_,i)=>hasAscended(i)).length+Number(finalPassed());}
 function render(html){
  screen.innerHTML=html;
- document.getElementById('level').textContent=history.some(item=>item.mode==='normal'&&item.hits>=18)?'Nivel 2':'Nivel 1';
+ document.getElementById('level').textContent='Nivel '+levelNumber();
  window.scrollTo(0,0);
 }
 function home(){
- render('<h1>La Constitución desde cero</h1><p>Introducción · Preámbulo, fechas, estructura y primeros artículos.</p>'+
- button('Estudiar','study()',true)+button('Tests','modes()')+button('Mi progreso','progressPage()')+button('Mis fallos','review()'));
+ render(heading('La Constitución desde cero')+paragraph('Tema 1 · Derechos y deberes fundamentales. La Corona.')+
+ button('Estudiar','study()',true)+button('Tests','testMenu()')+button('Mi progreso','progressPage()')+button('Mis fallos','review()'));
 }
-const titles=['Principios generales del Estado','Derechos y deberes fundamentales','La Corona','Las Cortes Generales','Gobierno y Administración','Relaciones entre Gobierno y Cortes','Poder Judicial','Economía y Hacienda','Organización territorial','Tribunal Constitucional','Reforma constitucional'];
+const topics=[{title:'Tema 1 · La Constitución Española',open:'studyTopic()'}];
 function study(){
- render(back+'<h1>Estudiar</h1>'+button('Tema 1 · Introducción a la Constitución','studyTopic()',true));
+ render(back+heading('Estudiar')+topics.map(topic=>button(topic.title,topic.open,true)).join(''));
 }
 function studyTopic(){
- render(button('Volver a Estudiar','study()')+'<h1>Tema 1</h1><p>Introducción a la Constitución</p>'+cardsIntro.map(([title,body])=>'<details class="panel"><summary>'+title+'</summary><p style="white-space:pre-line">'+body+'</p></details>').join('')+
- '<details class="panel"><summary>Mapa de los 11 títulos</summary><ul>'+titles.map((title,i)=>'<li><strong>'+(['Preliminar','I','II','III','IV','V','VI','VII','VIII','IX','X'][i])+'</strong> · '+title+'</li>').join('')+'</ul></details>'+
- '<p><a href="https://www.boe.es/buscar/act.php?id=BOE-A-1978-31229#preambulo" target="_blank" rel="noopener">Ver el texto oficial</a></p>'+button('Pasar a los tests','modes()',true));
+ render(button('Volver a Estudiar','study()')+heading('Tema 1')+
+ guide('Cada bloque tiene su puerta. Explora, practica y consigue 18 aciertos en el examen de ascenso para abrirla.')+
+ blocks.map((name,i)=>details(formatBlock(i),
+ '<div class="door-state '+(hasAscended(i)?'door-open':'')+'"><span class="door-icon" aria-hidden="true"></span>'+(hasAscended(i)?'Puerta abierta':'Puerta por abrir')+(played[i]?' · Juego completado':'')+'</div>'+
+ button('Leer','reading('+i+')')+button('Tarjetas didácticas','startCards('+i+')')+
+ button('Jugar','startGame('+i+')',true)+button('Test','modes('+i+')'))).join('')+
+ '<section class="panel"><h2>La puerta final</h2>'+paragraph(doorsOpen()?'35 retos, cinco por bloque. Necesitas 32 aciertos para el ascenso final.':'Abre las siete puertas para desbloquear los 35 retos del Tema 1.')+
+ (doorsOpen()?button(finalPassed()?'Repetir reto final':'Empezar reto final','startFinal()',true):'')+'</section>');
 }
-function modes(){
- render(back+'<h1>Tests</h1><p>Introducción a la Constitución · 20 preguntas por intento</p>'+
- button('Fácil · Corrección al responder',"start('easy')",true)+button('Normal · Corrección al entregar',"start('normal')")+
- '<div class="panel"><strong>Difícil · Exámenes oficiales</strong><small>Pendiente de incorporar las preguntas oficiales.</small></div>');
+function reading(block){
+ const intro=cardsIntro.map(([title,body])=>details(title,'<p class="lines">'+escapeHtml(body)+'</p>')).join('')+
+ details('Mapa de los 11 títulos','<ol start="0">'+titles.map(title=>'<li>'+escapeHtml(title)+'</li>').join('')+'</ol>')+
+ cards.map(([title,body])=>details(title,paragraph(body))).join('');
+ const sections=new Map();
+ for(const [,ref,prompt,right] of factsByBlock[block]){
+  const article=ref.match(/^\d+/)[0];
+  if(!sections.has(article))sections.set(article,[]);
+  sections.get(article).push([prompt,right]);
+ }
+ render(topicBack+heading(blocks[block])+(block===0?intro:[...sections].map(([article,rows])=>details('Artículo '+article,rows.map(([q,a])=>'<strong>'+escapeHtml(q)+'</strong>'+paragraph(a)).join('')+
+ '<a href="'+boe+'#a'+article+'" target="_blank" rel="noopener">Leer el artículo en el BOE</a>')).join(''))+
+ button('Practicar con tarjetas','startCards('+block+')',true));
 }
-function start(kind){
+const introQuestions=pool.map(q=>({...q,block:0}));
+const knownAlternatives={
+ 'A los 18 años':['A los 16 años','A los 20 años','A los 21 años'],
+ 'La ley':['Las Cortes por acuerdo sin rango de ley','El Gobierno mediante instrucciones','El Tribunal Constitucional mediante sentencia'],
+ 'Las Cortes Generales':['El Gobierno','El Congreso en exclusiva','El Senado en exclusiva'],
+ 'El Rey':['El presidente del Gobierno','El presidente del Congreso','El Consejo de Ministros'],
+ 'Una resolución judicial':['Una orden administrativa','La autorización del Gobierno','Un informe de la Fiscalía'],
+ 'Una ley orgánica':['Una ley ordinaria','Un decreto legislativo','Un reglamento parlamentario'],
+ 'Obligatoria y gratuita':['Obligatoria y de pago','Voluntaria y gratuita','Voluntaria y de pago']
+};
+const allQuestions=[...introQuestions,...facts.map(([number,ref,prompt,right],i)=>{
+ const block=number-1;
+ const related=[...new Set(factsByBlock[block].map(row=>row[3]))].filter(answer=>answer!==right);
+ return {id:'fact-'+i,block,ref,prompts:[prompt,'Según el artículo '+ref+', '+prompt.charAt(0).toLowerCase()+prompt.slice(1)],right,
+ wrong:knownAlternatives[right]??related.slice(i%related.length).concat(related).slice(0,3),note:'Artículo '+ref+' · '+right+'.'};
+})];
+const questionsFor=block=>allQuestions.filter(q=>q.block===block);
+function startCards(block){
+ selectedBlock=block;
+ const questions=questionsFor(block);
+ const due=questions.filter(q=>!memory[q.id]||memory[q.id].due<=now());
+ deck=shuffle(due);
+ cardPosition=0;flipped=false;
+ if(!deck.length){
+  render(topicBack+heading('Tarjetas didácticas')+paragraph('Ya has repasado las tarjetas pendientes de este bloque.')+button('Ver todas de nuevo','allCards()',true));
+  return;
+ }
+ showCard();
+}
+function allCards(){deck=shuffle(questionsFor(selectedBlock));cardPosition=0;flipped=false;showCard();}
+function showCard(){
+ const q=deck[cardPosition];
+ if(!q){render(topicBack+heading('Tarjetas repasadas')+guide('Las que marcaste para repasar volverán mañana.')+button('Jugar con la Llave','startGame('+selectedBlock+')',true));return;}
+ render(topicBack+heading('Tarjetas didácticas')+paragraph(formatBlock(selectedBlock)+' · '+(cardPosition+1)+' de '+deck.length)+
+ '<section class="panel flash"><h2>'+escapeHtml(q.prompts[0])+'</h2>'+(flipped?paragraph(q.right)+'<small>'+escapeHtml(q.note)+'</small>':'')+'</section>'+
+ (flipped?button('Me la sé','rateCard(true)',true)+button('Repasar','rateCard(false)'):button('Girar tarjeta','flipCard()',true)));
+}
+function flipCard(){flipped=true;showCard();}
+function rateCard(known){
+ const id=deck[cardPosition].id;
+ const old=memory[id]?.step??0;
+ const step=known?Math.min(old+1,3):0;
+ memory[id]={step,due:now()+[1,1,3,7][step]*duration};
+ saveStored('-tarjetas',memory);
+ cardPosition++;flipped=false;showCard();
+}
+function testMenu(){
+ render(back+heading('Tests')+blocks.map((_,i)=>button(formatBlock(i),'modes('+i+')')).join(''));
+}
+function modes(block){
+ selectedBlock=block;
+ render(button('Volver a los bloques','testMenu()')+heading('Tests')+paragraph(formatBlock(block)+' · 20 preguntas por intento')+
+ button('Fácil · Corrección al responder',"startTest('easy')",true)+button('Normal · Corrección al entregar',"startTest('normal')")+
+ button('Difícil · Preguntas sobre artículos',"startTest('hard')")+
+ button(hasAscended(block)?'Repetir examen de ascenso':'Examen de ascenso · 18/20',"startTest('ascenso')")+
+ '<p>El modo Difícil incluye preguntas de práctica. <a href="https://www.inap.es/es/seleccion/procesos-selectivos-de-cuerposescalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado" target="_blank" rel="noopener">Consultar exámenes oficiales de TAI</a>.</p>');
+}
+function referenceQuestion(q){
+ const group=questionsFor(q.block);
+ const relatedRefs=new Set(group.filter(item=>item.right===q.right).map(item=>item.ref.match(/^\d+/)[0]));
+ const refs=[...new Set(group.map(item=>item.ref.match(/^\d+/)[0]))];
+ const correct=q.ref.match(/^\d+/)[0];
+ return {...q,id:q.id+'-art',prompts:['¿A qué artículo pertenece esta regla? '+q.right+'. '+q.prompts[0]],right:'Artículo '+correct,
+ wrong:shuffle(refs.filter(ref=>!relatedRefs.has(ref))).slice(0,3).map(ref=>'Artículo '+ref)};
+}
+function testPool(block){
+ const available=questionsFor(block);
+ return available.length>=20?available:[...available,...available.map(referenceQuestion)];
+}
+function startTest(kind){
  mode=kind;
- let selection=shuffle(pool).slice(0,20);
- if(previous[kind]&&selection.every(q=>previous[kind].includes(q.id)))selection[0]=shuffle(pool.filter(q=>!previous[kind].includes(q.id)))[0];
- previous[kind]=selection.map(q=>q.id);
- begin(selection);
+ const available=testPool(selectedBlock);
+ const token=selectedBlock+'-'+kind;
+ let items=shuffle(available).slice(0,20);
+ if(previous[token]&&items.every(q=>previous[token].includes(q.id))){
+  const alternate=shuffle(available.filter(q=>!previous[token].includes(q.id)))[0];
+  if(alternate)items[0]=alternate;
+ }
+ previous[token]=items.map(q=>q.id);
+ begin(items.map(q=>({
+  ...q,prompt:kind==='easy'?q.prompts[0]:kind==='hard'&&q.ref&&!q.id.endsWith('-art')?'Identifica la respuesta correcta. '+q.prompts[0]:shuffle(q.prompts.slice(1))[0]??q.prompts[0]
+ })));
 }
-function begin(selection){
- test=selection.map(q=>({...q,prompt:mode==='normal'?shuffle(q.prompts.slice(1))[0]:shuffle(q.prompts.slice(0,2))[0],options:shuffle([q.right,...q.wrong])}));
- answers=Array(test.length).fill(null);cursor=0;checked=false;question();
+const orderChallenges=[
+ {prompt:'Ordena los pasos de la Constitución de 1978 del más antiguo al más reciente.',steps:['31 de octubre de 1978','6 de diciembre de 1978','27 de diciembre de 1978','29 de diciembre de 1978'],note:'31 de octubre: aprobación. 6 de diciembre: ratificación. 27 de diciembre: sanción. 29 de diciembre: publicación.'},
+ {prompt:'Coloca estos artículos del menor al mayor.',steps:['Dignidad y derechos inviolables','Nacionalidad','Mayoría de edad','Igualdad ante la ley'],note:'Artículos 10, 11, 12 y 14.'},
+ {prompt:'Ordena estos derechos por número de artículo.',steps:['Vida','Libertad personal','Reunión','Educación'],note:'Artículos 15, 17, 21 y 27.'},
+ {prompt:'Ordena estos derechos y deberes por número de artículo.',steps:['Defensa de España','Contribución a gastos públicos','Matrimonio','Libertad de empresa'],note:'Artículos 30, 31, 32 y 38.'},
+ {prompt:'Ordena estos principios por número de artículo.',steps:['Familia','Seguridad Social','Protección de la salud','Vivienda'],note:'Artículos 39, 41, 43 y 47.'},
+ {prompt:'Ordena estos contenidos por número de artículo.',steps:['Garantías y amparo','Defensor del Pueblo','Suspensión de derechos','Estados de alarma, excepción y sitio'],note:'Artículos 53, 54, 55 y 116.'},
+ {prompt:'Ordena estos contenidos de la Corona por número de artículo.',steps:['El Rey como jefe del Estado','Funciones del Rey','Refrendo','Casa del Rey'],note:'Artículos 56, 62, 64 y 65.'}
+];
+const fills=[
+ ['La Constitución tiene ___ artículos.','169',['165','166','170'],'El último artículo es el 169.'],
+ ['Los españoles son mayores de edad a los ___ años.','18',['16','20','21'],'Artículo 12 · Mayoría de edad.'],
+ ['La detención preventiva no puede superar ___ horas.','72',['24','48','96'],'Artículo 17.2 · Debe durar solo el tiempo estrictamente necesario.'],
+ ['El sistema tributario se inspira en igualdad y ___.','progresividad',['reciprocidad','publicidad','solidaridad'],'Artículo 31.1 · Debe tener en cuenta la capacidad económica.'],
+ ['Los poderes públicos promoverán la ciencia y la investigación en beneficio del interés ___.','general',['particular','empresarial','territorial'],'Artículo 44.2 · Ciencia e investigación.'],
+ ['El estado de alarma tiene un plazo máximo inicial de ___ días.','15',['10','20','30'],'Artículo 116.2 · La prórroga necesita autorización del Congreso.'],
+ ['El Rey es el jefe del ___.','Estado',['Gobierno','Congreso','Senado'],'Artículo 56.1 · El Rey simboliza la unidad y permanencia del Estado.']
+];
+const pairs=[
+ ['Toca la pareja correcta para «ratificación».','6 de diciembre de 1978',['31 de octubre de 1978','27 de diciembre de 1978','29 de diciembre de 1978'],'La ratificación se hizo en referéndum.'],
+ ['Toca la pareja correcta para «igualdad ante la ley».','Artículo 14',['Artículo 10','Artículo 12','Artículo 13'],'El artículo 14 recoge la igualdad y la prohibición de discriminación.'],
+ ['Toca la pareja correcta para «inviolabilidad del domicilio».','Artículo 18.2',['Artículo 17.2','Artículo 18.3','Artículo 20.5'],'El 18.2 protege el domicilio; el 18.3, el secreto de las comunicaciones.'],
+ ['Toca la pareja correcta para «negociación colectiva laboral».','Artículo 37.1',['Artículo 31.1','Artículo 35.1','Artículo 38'],'El artículo 37.1 protege la negociación colectiva y la fuerza vinculante del convenio.'],
+ ['Toca la pareja correcta para «vivienda».','Artículo 47',['Artículo 43','Artículo 45','Artículo 50'],'El artículo 47 trata de vivienda y del uso del suelo.'],
+ ['Toca la pareja correcta para «suspensión individual».','Artículo 55.2',['Artículo 53.2','Artículo 54','Artículo 55.1'],'El 55.2 regula la suspensión individual en condiciones determinadas.'],
+ ['Toca la pareja correcta para «refrendo».','Artículo 64',['Artículo 56','Artículo 62','Artículo 65'],'El artículo 64 indica quién refrenda y quién asume la responsabilidad.']
+];
+function gameItems(block,count){
+ const order=orderChallenges[block];
+ const [fill,pick,wrong,note]=fills[block];
+ const [pair,match,alternatives,pairNote]=pairs[block];
+ return shuffle([
+  {id:'orden-'+block,block,...order,right:order.steps.join(' → ')},
+  {id:'hueco-'+block,block,prompt:fill,right:pick,wrong,note},
+  {id:'pareja-'+block,block,prompt:pair,right:match,wrong:alternatives,note:pairNote},
+  ...shuffle(questionsFor(block)).slice(0,count-3).map(q=>({...q,prompt:q.prompts[0]}))
+ ]);
 }
-function answerStatus(answer,right){
- return answer===null?'':answer===right?'correct':'incorrect';
+function startGame(block){selectedBlock=block;mode='game';begin(gameItems(block,8));}
+function startFinal(){if(!doorsOpen())return;mode='final';begin(shuffle(blocks.flatMap((_,i)=>gameItems(i,5))));}
+function begin(items){
+ test=items.map(q=>({...q,options:shuffle(q.steps??[q.right,...q.wrong])}));
+ answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];
+ question();
 }
+function answerStatus(answer,right){return answer===null?'':answer===right?'correct':'incorrect';}
 function question(){
- const q=test[cursor];
- const instant=mode!=='normal';
- const selected=answers[cursor];
- render(button('Salir del test',"if(confirm('¿Salir de este intento?'))home()")+
- '<small>Pregunta '+(cursor+1)+' de '+test.length+' · '+answers.filter(a=>a!==null).length+' respondidas</small>'+
- '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+q.prompt+'</h2>'+
- q.options.map((option,i)=>'<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected)+'" '+(checked?'disabled':'')+' onclick="selectAnswer('+i+')">'+option+'</button>').join('')+
- (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong><p>'+q.note+'</p></div>':'')+
+ const q=test[cursor], selected=answers[cursor];
+ const instant=['easy','game','review'].includes(mode);
+ const game=['game','final'].includes(mode);
+ const order=q.steps;
+ const options=q.options.map((option,i)=>{
+  const position=order?sequence.indexOf(option):-1;
+  return '<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected||position>=0)+'" '+(checked||position>=0?'disabled':'')+' onclick="selectAnswer('+i+')">'+(position>=0?(position+1)+'. ':'')+escapeHtml(option)+'</button>';
+ }).join('');
+ render(button('Salir del intento',"if(confirm('¿Salir de este intento?'))home()")+
+ (game?guide(order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
+ '<small>'+escapeHtml(formatBlock(q.block??selectedBlock))+' · '+(cursor+1)+' de '+test.length+'</small>'+
+ '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+escapeHtml(q.prompt)+'</h2>'+
+ (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+options+
+ (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+escapeHtml(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong>'+paragraph(q.note)+'</div>':'')+
+ (!checked&&(sequence.length||(!instant&&selected!==null))?button(order?'Reiniciar orden':'Quitar respuesta','clearAnswer()'):'')+
  (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
  (instant&&!checked?button('Dejar en blanco','skip()'):'')+
- (!instant&&selected!==null?button('Quitar respuesta','clearAnswer()'):'')+
  (!instant&&cursor>0?button('Anterior','move(-1)'):'')+
- (!instant||checked?button(cursor===test.length-1?'Entregar test':'Siguiente','move(1)',true):''));
+ (!instant||checked?button(cursor===test.length-1?'Entregar':'Siguiente','move(1)',true):''));
 }
-function selectAnswer(i){answers[cursor]=test[cursor].options[i];question();}
-function clearAnswer(){answers[cursor]=null;question();}
+function selectAnswer(i){
+ const q=test[cursor];
+ if(q.steps){
+  sequence.push(q.options[i]);
+  if(sequence.length===q.steps.length)answers[cursor]=sequence.join(' → ');
+ }else answers[cursor]=q.options[i];
+ question();
+}
+function clearAnswer(){answers[cursor]=null;sequence=[];question();}
 function check(){checked=true;question();}
-function skip(){answers[cursor]=null;check();}
+function skip(){answers[cursor]=null;sequence=[];check();}
 function move(delta){
  if(cursor+delta===test.length){finish();return;}
- cursor+=delta;checked=false;question();
+ cursor+=delta;checked=false;
+ sequence=test[cursor].steps&&answers[cursor]!==null?answers[cursor].split(' → '):[];
+ question();
 }
+const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',review:'Repaso'};
 function finish(){
- const results=test.map((q,i)=>({id:q.id,prompt:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
+ const results=test.map((q,i)=>({id:q.id,block:q.block,prompt:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
  const hits=results.filter(q=>q.answer===q.right).length;
  const blanks=answers.filter(a=>a===null).length;
  const misses=test.length-hits-blanks;
- const ascends=mode==='normal'&&hits>=18&&!history.some(item=>item.mode==='normal'&&item.hits>=18);
+ const before=levelNumber();
  if(mode==='review'){
-  for(const q of results){if(q.answer===q.right)mastered[q.id]=history[0]?.date;}
-  try {localStorage.setItem(key+'-repaso',JSON.stringify(mastered));} catch {}
- } else {
-  history.unshift({date:new Date().toISOString(),mode,hits,blanks,misses,results});
-  try {localStorage.setItem(key,JSON.stringify(history));} catch {}
+  for(const q of results)if(q.answer===q.right)mastered[q.id]=new Date().toISOString();
+  saveStored('-repaso',mastered);
+ }else{
+  if(mode==='game'){played[selectedBlock]=true;saveStored('-juegos',played);}
+  history.unshift({date:new Date().toISOString(),mode,block:selectedBlock,hits,blanks,misses,results});
+  saveStored('',history);
  }
- render(back+'<h1>Resultado</h1><div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div><p>'+hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco</p>'+
- (ascends?'<div class="panel"><strong>¡Subes al nivel 2!</strong></div>':'')+
- results.map(q=>'<details class="panel '+answerStatus(q.answer,q.right)+'" '+(q.answer!==q.right?'open':'')+'><summary>'+(q.answer===q.right?'Acierto':q.answer===null?'En blanco':'Fallo')+' · '+q.prompt+'</summary><p>Tu respuesta · '+(q.answer??'En blanco')+'<br>Correcta · '+q.right+'</p><small>'+q.note+'</small></details>').join('')+
- (mode==='review'?button('Volver a mis fallos','review()',true):button('Volver a los tests','modes()',true)));
+ const ascended=levelNumber()>before;
+ render(topicBack+heading('Resultado · '+modeNames[mode])+'<div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div>'+
+ paragraph(hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco')+
+ (ascended?guide('¡Puerta abierta! Has subido al nivel '+levelNumber()+'.'):'')+
+ (mode==='final'?'<ul>'+blocks.map((name,i)=>'<li>'+escapeHtml(name)+' · '+results.filter(q=>q.block===i&&q.answer===q.right).length+'/5</li>').join('')+'</ul>':'')+
+ results.map(q=>'<details class="panel '+answerStatus(q.answer,q.right)+'" '+(q.answer!==q.right?'open':'')+'><summary>'+
+ (q.answer===q.right?'Acierto':q.answer===null?'En blanco':'Fallo')+' · '+escapeHtml(q.prompt)+'</summary>'+
+ paragraph('Tu respuesta · '+(q.answer??'En blanco')+' | Correcta · '+q.right)+'<small>'+escapeHtml(q.note)+'</small></details>').join('')+
+ (mode==='review'?button('Volver a mis fallos','review()',true):button('Volver al Tema 1','studyTopic()',true)));
 }
 function progressPage(){
  const total=field=>history.reduce((sum,item)=>sum+item[field],0);
- render(back+'<h1>Mi progreso</h1><div class="panel"><strong>'+history.length+' tests completados</strong><p>'+total('hits')+' aciertos · '+total('misses')+' fallos · '+total('blanks')+' en blanco</p></div><h2>Historial</h2>'+
- (history.length?history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(item.mode==='easy'?'Fácil':'Normal')+' · '+item.hits+'/20</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join(''):'<p>Tu primer test aparecerá aquí cuando lo entregues.</p>')+
+ const attempted=total('hits')+total('misses');
+ render(back+heading('Mi progreso')+paragraph(total('hits')+' aciertos · '+total('misses')+' fallos · '+total('blanks')+' en blanco')+
+ paragraph(attempted?Math.round(total('hits')*100/attempted)+' % de acierto en las preguntas respondidas':'Aún no hay intentos registrados.')+
+ '<h2>Bloques</h2>'+blocks.map((name,i)=>{
+  const seen=new Set(history.flatMap(item=>item.results.filter(q=>(q.block??item.block??0)===i&&q.answer!==null).map(q=>q.id)));
+  const available=questionsFor(i);
+  const covered=available.filter(q=>seen.has(q.id)||seen.has(q.id+'-art')).length;
+  return '<div class="panel"><strong>'+escapeHtml(name)+'</strong>'+paragraph(covered+' de '+available.length+' fichas de contenido practicadas · '+(hasAscended(i)?'Puerta abierta':'Ascenso pendiente'))+'</div>';
+ }).join('')+'<h2>Historial</h2>'+history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(modeNames[item.mode]??item.mode)+' · '+item.hits+'/'+item.results.length+'</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join('')+
  '<small>El progreso se guarda en este navegador.</small>');
 }
 function pendingMistakes(){
@@ -204,14 +1313,20 @@ function pendingMistakes(){
 }
 function review(){
  const failed=pendingMistakes();
- render(back+'<h1>Mis fallos</h1><p>'+failed.length+(failed.length===1?' pregunta por repasar.':' preguntas por repasar.')+'</p>'+
+ render(back+heading('Mis fallos')+paragraph(failed.length+' por repasar')+
  (failed.length?button('Practicar mis fallos','startReview()',true):'')+
- failed.map(q=>'<details class="panel"><summary>'+q.prompt+'</summary><p>'+q.right+'</p><small>'+q.note+'</small></details>').join(''));
+ failed.map(q=>details(q.prompt,paragraph(q.right)+'<small>'+escapeHtml(q.note)+'</small>')).join(''));
 }
 function startReview(){
- const ids=new Set(pendingMistakes().map(q=>q.id));
- const failed=pool.filter(q=>ids.has(q.id));
- if(failed.length){mode='review';begin(shuffle(failed).slice(0,20));}
+ const failed=pendingMistakes();
+ if(!failed.length)return;
+ const ids=shuffle(failed).slice(0,20);
+ const catalog=[...blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5)])];
+ mode='review';
+ begin(ids.map(miss=>{
+  const q=catalog.find(item=>item.id===miss.id);
+  return {...q,prompt:q?.prompts?shuffle(q.prompts)[0]:miss.prompt};
+ }).filter(q=>q.right));
 }
 home();
 </script>
