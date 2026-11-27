@@ -1435,7 +1435,7 @@ async function changeAccount(user){
  if(user&&!user.displayName)aliasPage(true);else home();
  if(user)queueSync();
 }
-function accountPage(){
+function accountPage(registering=false){
  if(!configured){
   render(back+heading('Mi cuenta')+paragraph('El acceso con cuenta estará disponible cuando se conecte el proyecto de Firebase.'));
   return;
@@ -1452,12 +1452,14 @@ function accountPage(){
   button('Sincronizar ahora','queueSync()',true)+button('Cerrar sesión','closeAccount()'));
   return;
  }
- render(back+heading('Mi cuenta')+
+ render(back+heading(registering?'Crear cuenta':'Iniciar sesión')+
  '<form id="account-form"><label>Correo electrónico<input name="email" type="email" autocomplete="email" required></label>'+
- '<label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>'+
- '<button class="primary" type="submit" value="login">Iniciar sesión</button><button type="submit" value="register">Crear cuenta</button>'+
- '<button type="button" onclick="resetPassword()">Restablecer contraseña</button></form><p id="account-message" role="status"></p>');
- document.getElementById('account-form').addEventListener('submit',submitAccount);
+ '<label>Contraseña<input name="password" type="password" autocomplete="'+(registering?'new-password':'current-password')+'" '+(registering?'minlength="6"':'')+' required></label>'+
+ '<button class="primary" type="submit">'+(registering?'Registrarme':'Iniciar sesión')+'</button>'+
+ (registering?'':'<button type="button" onclick="resetPassword()">Restablecer contraseña</button>')+
+ '</form><p id="account-message" role="status"></p>'+
+ button(registering?'Ya tengo cuenta':'Crear cuenta','accountPage('+!registering+')'));
+ document.getElementById('account-form').addEventListener('submit',event=>submitAccount(event,registering));
 }
 function aliasPage(first){
  if(!account)return;
@@ -1480,18 +1482,18 @@ function aliasPage(first){
   finally{submit.disabled=false;}
  });
 }
-async function submitAccount(event){
+async function submitAccount(event,registering){
  event.preventDefault();
  const form=event.target;
- const registering=event.submitter?.value==='register';
  if(registering&&form.elements.password.value.length<6){accountMessage('Usa una contraseña de al menos 6 caracteres.');return;}
+ accountMessage(registering?'Creando tu cuenta…':'Iniciando sesión…');
  form.querySelectorAll('button').forEach(button=>button.disabled=true);
  try{
   const action=registering?backend.createUserWithEmailAndPassword:backend.signInWithEmailAndPassword;
   await action(backend.auth,form.elements.email.value.trim(),form.elements.password.value);
  }catch(error){
-  const messages={'auth/email-already-in-use':'Ya existe una cuenta con ese correo.','auth/invalid-credential':'Revisa el correo y la contraseña.','auth/weak-password':'Elige una contraseña más segura.','auth/network-request-failed':'Revisa tu conexión e inténtalo de nuevo.'};
-  accountMessage(messages[error.code]??'El acceso no se pudo completar. Revisa la configuración de Firebase o inténtalo más tarde.');
+  const messages={'auth/operation-not-allowed':'Activa Correo electrónico/contraseña en Firebase Authentication.','auth/auth-domain-config-required':'Falta configurar el dominio de acceso en Firebase.','auth/unauthorized-domain':'Añade clave-169.pages.dev en Firebase Authentication → Configuración → Dominios autorizados.','auth/invalid-email':'Revisa el formato del correo electrónico.','auth/email-already-in-use':'Ya existe una cuenta con ese correo.','auth/invalid-credential':'Revisa el correo y la contraseña.','auth/weak-password':'Elige una contraseña más segura.','auth/network-request-failed':'Revisa tu conexión e inténtalo de nuevo.'};
+  accountMessage(messages[error.code]??'Firebase no pudo completar el acceso ('+(error.code??'error desconocido')+').');
  }finally{form.querySelectorAll('button').forEach(button=>button.disabled=false);}
 }
 function accountMessage(message){const box=document.getElementById('account-message');if(box)box.textContent=message;}
