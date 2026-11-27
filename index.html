@@ -1097,7 +1097,7 @@ function studyTopic(){
  blocks.map((name,i)=>details(formatBlock(i),
  '<div class="door-state '+(hasAscended(i)?'door-open':'')+'"><span class="door-icon" aria-hidden="true"></span>'+(hasAscended(i)?'Puerta abierta':'Puerta por abrir')+(played[i]?' · Juego completado':'')+'</div>'+
  button('Leer','reading('+i+')')+button('Tarjetas didácticas','startCards('+i+')')+
- button('Jugar','startGame('+i+')',false,'game-action')+button('Test','modes('+i+')'))).join('')+
+ button('Jugar','startGame('+i+')',false,'game-action')+button('Rellenar huecos','startWritten('+i+')',false,'game-action')+button('Test','modes('+i+')'))).join('')+
  '<section class="panel"><h2>La puerta final</h2>'+paragraph(doorsOpen()?'35 retos, cinco por bloque. Necesitas 32 aciertos para el ascenso final.':'Abre las siete puertas para desbloquear los 35 retos del Tema 1.')+
  (doorsOpen()?button(finalPassed()?'Repetir reto final':'Empezar reto final','startFinal()',false,'game-action'):'')+'</section>');
 }
@@ -1248,28 +1248,58 @@ function gameItems(block,count){
   ...shuffle(questionsFor(block)).slice(0,count-3).map(q=>({...q,prompt:q.prompts[0]}))
  ]);
 }
+const writtenPrompts=[
+ [['Las Cortes aprobaron la Constitución el ___ de octubre de 1978.','31'],['La Constitución se ratificó el ___ de diciembre de 1978.','6'],['El Rey sancionó el texto el ___ de diciembre de 1978.','27'],['La Constitución se publicó el ___ de diciembre de 1978.','29']],
+ [['Ningún español de ___ podrá ser privado de su nacionalidad.','origen'],['La excepción electoral del artículo 13.2 se refiere a elecciones ___.','municipales'],['La prohibición de discriminación del artículo 14 protege la ___ ante la ley.','igualdad']],
+ [['El procedimiento de habeas ___ lleva ante un juez a la persona detenida ilegalmente.','corpus'],['El artículo 20.2 prohíbe la censura ___.','previa'],['La enseñanza básica es obligatoria y ___.','gratuita']],
+ [['El artículo 33 reconoce la propiedad privada y la ___.','herencia'],['Los convenios colectivos tienen fuerza ___.','vinculante'],['El artículo 38 reconoce la libertad de empresa en la economía de ___.','mercado']],
+ [['El artículo 41 destaca la protección ante situaciones de ___.','desempleo'],['Quien cause daños al medio ambiente tiene la obligación de ___ el daño.','reparar'],['El artículo 47 busca impedir la ___ con el suelo.','especulación']],
+ [['El recurso de amparo se interpone ante el Tribunal ___.','Constitucional'],['El Defensor del Pueblo es designado por las Cortes ___.','Generales'],['El estado de sitio requiere mayoría ___ del Congreso.','absoluta']],
+ [['El Rey sanciona y ___ las leyes.','promulga'],['La ley no puede autorizar indultos ___.','generales'],['El Rey nombra y releva libremente a los miembros civiles y militares de su ___.','Casa']]
+];
+function writtenItems(block){
+ const [prompt,right,,note]=fills[block];
+ return [{prompt,right,note},...writtenPrompts[block].map(([prompt,right])=>({prompt,right,note:prompt.replace('___',right)}))]
+  .map((q,i)=>({...q,id:'escrito-'+block+'-'+i,block,written:true}));
+}
+function startWritten(block){
+ selectedBlock=block;mode='written';begin(shuffle(writtenItems(block)));
+}
+function normalizeWord(word){
+ return word.trim().toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function submitWritten(event){
+ event.preventDefault();
+ const value=event.currentTarget.elements.word.value.trim();
+ if(!value)return;
+ const right=test[cursor].right;
+ answers[cursor]=normalizeWord(value)===normalizeWord(right)?right:value;
+ check();
+}
 function startGame(block){selectedBlock=block;mode='game';begin(gameItems(block,8));}
 function startFinal(){if(!doorsOpen())return;mode='final';begin(shuffle(blocks.flatMap((_,i)=>gameItems(i,5))));}
 function begin(items){
- test=items.map(q=>({...q,options:shuffle(q.steps??[q.right,...q.wrong])}));
+ test=items.map(q=>({...q,options:shuffle(q.steps??[q.right,...(q.wrong??[])])}));
  answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];
  question();
 }
 function answerStatus(answer,right){return answer===null?'':answer===right?'correct':'incorrect';}
 function question(){
  const q=test[cursor], selected=answers[cursor];
- const instant=['easy','game','review'].includes(mode);
- const game=['game','final'].includes(mode);
+ const instant=['easy','game','review','written'].includes(mode);
+ const game=['game','final','written'].includes(mode);
  const order=q.steps;
  const options=q.options.map((option,i)=>{
   const position=order?sequence.indexOf(option):-1;
   return '<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected||position>=0)+'" '+(checked||position>=0?'disabled':'')+' onclick="selectAnswer('+i+')">'+(position>=0?(position+1)+'. ':'')+escapeHtml(option)+'</button>';
  }).join('');
  render(button('Salir del intento',"if(confirm('¿Salir de este intento?'))home()")+
- (game?guide(order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
+ (game?guide(q.written?'Escribe la palabra o el número que falta.':order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
  '<small>'+escapeHtml(formatBlock(q.block??selectedBlock))+' · '+(cursor+1)+' de '+test.length+'</small>'+
  '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+escapeHtml(q.prompt)+'</h2>'+
- (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+options+
+ (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+(q.written
+  ?(checked?(selected===null?'':paragraph('Tu respuesta · '+selected)):'<form onsubmit="submitWritten(event)"><label>Tu respuesta<input name="word" required maxlength="80" autocomplete="off"></label><button class="primary" type="submit">Comprobar</button></form>')
+  :options)+
  (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+escapeHtml(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong>'+paragraph(q.note)+'</div>':'')+
  (!checked&&(sequence.length||(!instant&&selected!==null))?button(order?'Reiniciar orden':'Quitar respuesta','clearAnswer()'):'')+
  (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
@@ -1294,7 +1324,7 @@ function move(delta){
  sequence=test[cursor].steps&&answers[cursor]!==null?answers[cursor].split(' → '):[];
  question();
 }
-const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',review:'Repaso'};
+const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',written:'Rellenar huecos',review:'Repaso'};
 function finish(){
  const results=test.map((q,i)=>({id:q.id,block:q.block,prompt:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
  const hits=results.filter(q=>q.answer===q.right).length;
@@ -1356,7 +1386,7 @@ function startReview(){
  const failed=pendingMistakes();
  if(!failed.length)return;
  const ids=shuffle(failed).slice(0,20);
- const catalog=[...blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5)])];
+ const catalog=[...blocks.flatMap((_,i)=>[...testPool(i),...gameItems(i,5),...writtenItems(i)])];
  mode='review';
  begin(ids.map(miss=>{
   const q=catalog.find(item=>item.id===miss.id);
@@ -1408,9 +1438,19 @@ function queueSync(){
    transaction.set(ref,progress);
   });
   if(account?.uid===uid)syncStatus.textContent='Progreso sincronizado';
- }).catch(()=>{
-  if(account?.uid===uid)syncStatus.textContent='Pendiente de sincronizar. Puedes reintentar desde Mi cuenta.';
+ }).catch(error=>{
+  if(account?.uid!==uid)return;
+  syncStatus.textContent=error.code==='permission-denied'?'Firestore ha denegado el acceso al progreso. Revisa las reglas de Firebase.':'Pendiente de sincronizar. Puedes reintentar desde Mi cuenta.';
  });
+}
+async function readAccountProgress(uid){
+ let timer;
+ try{
+  return await Promise.race([
+   backend.getDocFromServer(backend.doc(backend.db,'users',uid)),
+   new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Tiempo de espera agotado')),4500);})
+  ]);
+ }finally{clearTimeout(timer);}
 }
 async function changeAccount(user){
  const revision=++accountRevision;
@@ -1421,7 +1461,7 @@ async function changeAccount(user){
  if(user){
   let progress=accountCache(user.uid);
   try{
-   const saved=await backend.getDocFromServer(backend.doc(backend.db,'users',user.uid));
+   const saved=await readAccountProgress(user.uid);
    progress=mergeProgress({...emptyProgress(),...saved.data()},progress);
   }catch{}
   if(revision!==accountRevision)return;
