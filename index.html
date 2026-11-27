@@ -33,11 +33,9 @@ button.account-action{background:#e9f0ff;border-color:#b3c8f4;color:#254e91;font
 
 body,h1,h2,.score{font-family:"Atkinson Hyperlegible","Trebuchet MS",system-ui,sans-serif}
 h1,h2{font-weight:700}
-main[data-section="study"]{--section-ink:#124f86;--section-paper:#f1f8ff;--section-wash:#d9eeff;--section-line:#9acbf0}
 main[data-section="test"]{--section-ink:#174b93;--section-paper:#eff4ff;--section-wash:#d8e6ff;--section-line:#a8bde9}
 main[data-section="progress"]{--section-ink:#165c39;--section-paper:#eff9f2;--section-wash:#d9f3e2;--section-line:#a9d8bb}
 main[data-section="review"]{--section-ink:#8f3630;--section-paper:#fff5f4;--section-wash:#ffe6e2;--section-line:#e9b9b3}
-main[data-section="game"]{--section-ink:#694b00;--section-paper:#fff9e7;--section-wash:#fff0b8;--section-line:#e4c66d}
 main[data-section="account"]{--section-ink:#254383;--section-paper:#f3f5ff;--section-wash:#e4eaff;--section-line:#bac8ee}
 main[data-section]{color:var(--section-ink);background:radial-gradient(ellipse at 80% 0%,var(--section-wash),transparent 70%)}
 main[data-section] :is(h1,h2,p,small,label,a,.score,.door-state){color:inherit}
@@ -46,6 +44,15 @@ main[data-section] :is(button.primary,button[aria-pressed="true"]):not(.correct,
 main[data-section] .flash-button:not(.correct,.incorrect){background:transparent}
 main[data-section] progress{accent-color:var(--section-ink)}
 main[data-section] :is(button,input,select,a,summary):focus-visible{outline-color:var(--section-ink)}
+main[data-section="study"],main[data-section] button.activity-study{--section-ink:#124f86;--section-paper:#f1f8ff;--section-wash:#d9eeff;--section-line:#9acbf0}
+main[data-section="cards"],main[data-section] button.activity-cards{--section-ink:#8d2437;--section-paper:#fff3f5;--section-wash:#ffe0e6;--section-line:#ecabba}
+main[data-section="trap"],main[data-section] button.activity-trap{--section-ink:#873904;--section-paper:#fff6ed;--section-wash:#ffe6ce;--section-line:#efb587}
+main[data-section="game"],main[data-section] button.activity-game{--section-ink:#694b00;--section-paper:#fff9e7;--section-wash:#fff0b8;--section-line:#e4c66d}
+main[data-section="battle"],main[data-section] button.activity-battle{--section-ink:#115a43;--section-paper:#effaf5;--section-wash:#d6f3e6;--section-line:#9bd6bf}
+main[data-section="matching"],main[data-section] button.activity-matching{--section-ink:#192e64;--section-paper:#f1f4ff;--section-wash:#dce5ff;--section-line:#a7b8e3}
+main[data-section="written"],main[data-section] button.activity-written{--section-ink:#5a317e;--section-paper:#f9f2ff;--section-wash:#edddff;--section-line:#cfabe9}
+main[data-section] button[class*="activity-"]:not(.correct,.incorrect,.achievement){background:var(--section-wash);border-color:var(--section-line);color:var(--section-ink)}
+.official-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.official-pdf{width:100%;height:min(56vh,420px);border:1px solid var(--section-line);border-radius:12px}
 </style>
 <header><strong class="brand"><img src="./clave-169-icon.png" width="36" height="36" alt="">CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
@@ -1095,7 +1102,7 @@ const finalPassed=()=>history.some(item=>item.mode==='final'&&item.hits>=32);
 const doorsOpen=()=>blocks.every((_,i)=>hasAscended(i));
 function levelNumber(){
  const earned=Math.max(1+Math.floor(experience()/100),1+blocks.filter((_,i)=>hasAscended(i)).length+Number(finalPassed()));
- return officialPasses()<2?Math.min(10,earned):earned;
+ return globalPassed()?Math.max(11,earned):Math.min(10,earned);
 }
 let section='';
 function render(html,{keepScroll=false}={}){
@@ -1116,17 +1123,26 @@ function home(){
 const topics=[{title:'Tema 1 · La Constitución Española',open:'studyTopic()'}];
 function study(){
  section='study';
- render(back+heading('Estudiar')+topics.map(topic=>button(topic.title,topic.open,true)).join(''));
+ render(back+heading('Estudiar')+topics.map(topic=>button(topic.title,topic.open,true)).join('')+
+ (globalPassed()?button('Tema 2 · Próximamente','studyNext()'):''));
+}
+function studyNext(){
+ section='study';
+ render(button('Volver a Estudiar','study()')+heading('Tema 2')+paragraph('Próximamente'));
 }
 function studyTopic(){
  section='study';
  render(button('Volver a Estudiar','study()')+heading('Tema 1')+
- guide('Cada bloque tiene su puerta. Explora, practica y consigue 18 aciertos en el examen de ascenso para abrirla.')+
  blocks.map((name,i)=>details(formatBlock(i),
- '<div class="door-state '+(hasAscended(i)?'door-open':'')+'"><span class="door-icon" aria-hidden="true"></span>'+(hasAscended(i)?'Puerta abierta':'Puerta por abrir')+(played[i]?' · Juego completado':'')+'</div>'+
- button('Leer','reading('+i+')')+button('Tarjetas didácticas','startCards('+i+')')+
- button('Jugar','startGame('+i+')',false,'game-action')+button('Rellenar huecos','startWritten('+i+')',false,'game-action')+button('Une las frases','startMatching('+i+')',false,'game-action')+button('🔎 Detecta la trampa',"startSpecial('trap',"+i+")",false,'game-action')+button('⚔️ Batalla de conceptos',"startSpecial('battle',"+i+")",false,'game-action')+button('Test','modes('+i+')'))).join('')+
- '<section class="panel"><h2>La puerta final</h2>'+paragraph(doorsOpen()?'35 retos, cinco por bloque. Necesitas 32 aciertos para el ascenso final.':'Abre las siete puertas para desbloquear los 35 retos del Tema 1.')+
+ button('Leer','reading('+i+')',false,'activity-study')+
+ button('Tarjetas didácticas','startCards('+i+')',false,'activity-cards')+
+ button('Detecta la trampa',"startSpecial('trap',"+i+")",false,'activity-trap')+
+ button('Reto rápido','startGame('+i+')',false,'activity-game')+
+ button('Batalla de conceptos',"startSpecial('battle',"+i+")",false,'activity-battle')+
+ button('Une las frases','startMatching('+i+')',false,'activity-matching')+
+ button('Rellenar huecos','startWritten('+i+')',false,'activity-written')+
+ button('Test','modes('+i+')'))).join('')+
+ '<section class="panel"><h2>Reto final</h2>'+paragraph(doorsOpen()?'35 retos, cinco por bloque. Necesitas 32 aciertos.':'Supera los siete exámenes de ascenso para desbloquear los 35 retos del Tema 1.')+
  (doorsOpen()?button(finalPassed()?'Repetir reto final':'Empezar reto final','startFinal()',false,'game-action'):'')+'</section>');
 }
 function reading(block){
@@ -1162,7 +1178,7 @@ const allQuestions=[...introQuestions,...facts.map(([number,ref,prompt,right],i)
 })];
 const questionsFor=block=>allQuestions.filter(q=>q.block===block);
 function startCards(block){
- section='study';
+ section='cards';
  selectedBlock=block;
  const questions=questionsFor(block);
  const due=questions.filter(q=>!memory[q.id]||memory[q.id].due<=now());
@@ -1176,9 +1192,9 @@ function startCards(block){
 }
 function allCards(){deck=shuffle(questionsFor(selectedBlock));cardPosition=0;flipped=false;showCard();}
 function showCard(){
- section='study';
+ section='cards';
  const q=deck[cardPosition];
- if(!q){render(topicBack+heading('Tarjetas repasadas')+guide('Las que marcaste para repasar volverán mañana.')+button('Jugar con la Llave','startGame('+selectedBlock+')',true));return;}
+ if(!q){render(topicBack+heading('Tarjetas repasadas')+guide('Las que marcaste para repasar volverán mañana.')+button('Practicar con Reto rápido','startGame('+selectedBlock+')',true));return;}
  render(topicBack+heading('Tarjetas didácticas')+paragraph(formatBlock(selectedBlock)+' · '+(cardPosition+1)+' de '+deck.length)+
  '<div class="flash-scene"><button class="flash-button" type="button" onclick="flipCard()" aria-pressed="false"><span class="flash-stack">'+
  '<span class="flash-face flash-question"><strong>'+escapeHtml(q.prompts[0])+'</strong><small>Toca para girar</small></span>'+
@@ -1206,7 +1222,22 @@ function rateCard(known){
 }
 function testMenu(){
  section='test';
- render(back+heading('Tests')+blocks.map((_,i)=>button(formatBlock(i),'modes('+i+')')).join(''));
+ render(back+heading('Tests')+blocks.map((_,i)=>button(formatBlock(i),'modes('+i+')')).join('')+
+ button('Test global · Todos los bloques','startGlobal()',true)+button('Simulacros oficiales TAI','officialMenu()'));
+}
+function startGlobal(){
+ mode='global';
+ selectedBlock=0;
+ const groups=blocks.map((_,i)=>shuffle(testPool(i)));
+ const counts=shuffle(blocks.map((_,i)=>i)).slice(0,6);
+ let items=groups.flatMap((group,i)=>group.slice(0,counts.includes(i)?3:2));
+ if(previous.global&&items.every(q=>previous.global.includes(q.id))){
+  const replacement=groups[0].find(q=>!previous.global.includes(q.id));
+  if(replacement)items[0]=replacement;
+ }
+ items=shuffle(items);
+ previous.global=items.map(q=>q.id);
+ begin(items.map(q=>({...q,prompt:q.prompts[0]})));
 }
 function modes(block){
  section='test';
@@ -1326,7 +1357,7 @@ function matchingItems(block){
 }
 let matchLeft=-1,matchRight=[];
 function startMatching(block){
- section='game';
+ section='matching';
  selectedBlock=block;
  mode='matching';
  test=shuffle(matchingItems(block));
@@ -1358,38 +1389,82 @@ function joinPhrase(i){
 function startGame(block){selectedBlock=block;mode='game';begin(gameItems(block,8));}
 function startFinal(){if(!doorsOpen())return;mode='final';begin(shuffle(blocks.flatMap((_,i)=>gameItems(i,5))));}
 const practiceModes=['easy','normal','hard','game','written','review','daily','trap','battle'];
-const officialExams=['Convocatoria 2024 · Ingreso libre','Convocatoria 2025 · Ingreso libre'];
-const officialPage='https://www.inap.es/es/seleccion/procesos-selectivos-de-cuerposescalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado';
-function officialPasses(){
- return new Set(history.filter(item=>item.mode==='official'&&officialExams.includes(item.exam)&&item.approved&&item.misses<=3).map(item=>item.exam)).size;
-}
+const globalPassed=()=>history.some(item=>item.mode==='global'&&item.misses+item.blanks<3);
 function experience(){return history.reduce((sum,item)=>sum+(item.mode==='official'?0:Math.max(0,item.hits??0)*5),0);}
 function experiencePanel(){
- const level=levelNumber(), xp=experience(), passes=officialPasses();
- const locked=level===10&&passes<2;
+ const level=levelNumber(), xp=experience();
+ const locked=level===10&&!globalPassed();
  return '<section class="panel"><strong>✨ Nivel '+level+' · '+xp+' XP</strong>'+
  '<progress aria-label="Experiencia del nivel" value="'+(locked?100:xp%100)+'" max="100"></progress>'+
- (locked?paragraph('🔒 Para superar el nivel 10, registra dos simulacros oficiales distintos aprobados con un máximo de 3 fallos. ('+passes+'/2)'):'')+
+ (locked?paragraph('Supera el Test global con un máximo de 2 preguntas sin acertar para pasar al nivel 11.'):'')+
  button('📋 Simulacros oficiales','officialMenu()',false,'test-action')+'</section>';
 }
+const officialExams=[
+ {
+  title:'14/12/2024 · Modelo A',
+  paper:'https://sede.inap.gob.es/documents/59312/2364268/Cuestionario_TAI_LI_2024_A_M8L91VL1CL_154AB89SD658.pdf/43a5d8c6-3f74-dbca-8452-c00408125ff8',
+  key:'https://sede.inap.gob.es/notas-inap/ficheros/Plantilla%20Cuestionario_TAI_LI_2024_A_definitiva.pdf',
+  answers:'BCADCAAADADCCBCBCDBCD-CDDBDBCCBCACCDDCDADDAACCADBB-DBBDACCAACCAADACAD-BBDBBAACDBCAAACCCDAADCDADABADAACBDABACDBABDABDAABBBCAA-BBDCADCAAC'
+ },
+ {
+  title:'23/05/2026 · Modelo A · Convocatoria 2025',
+  paper:'https://sede.inap.gob.es/sites/sede/files/public/2026-05/Cuestionario%20TAI-L-ModeloA.pdf',
+  key:'https://sede.inap.gob.es/sites/sede/files/public/2026-10/PlantillarespuestasDefTAI-L-A_G4WN8WY1M8_154AB89SD658.pdf',
+  answers:'CCCADBDBADBDBCBCBCA-CAADCDBABCCADACCBADADACDBCCCDACADBBDBAABBBDACAAACBBCBBDCABBCBCACDBBCABACCBBBCAADBCADAB-ABDDCCACAABDABBDCBDDACCDBDCC'
+ },
+ {
+  title:'24/07/2026 · Extraordinario · Convocatoria 2025',
+  paper:'https://sede.inap.gob.es/sites/sede/files/public/2026-07/cuestionario_TAI-L_ext_9QVS9NM8ER_154AB89SD658.pdf',
+  key:'https://sede.inap.gob.es/sites/sede/files/public/2026-10/PlantillarespuestasDefTAI-L-EXTRAORDINARIO_1E0IFRJ3RK_154AB89SD658.pdf',
+  answers:'DAADCBCADCCCBCCCBACACDBDDABCBBCDDCCCCBADCAADACBDBCCBBABCCAAACABBCBDAADBCAADBDBBDADAABCBDDAABDCABBDCDACBCBDDBABCADBDCBABACBBDDAAABBDBACC'
+ }
+];
+const officialLabels=['Primera parte','Supuesto práctico I','Supuesto práctico II'];
 function officialMenu(){
  section='test';
- render(back+heading('📋 Simulacros oficiales de TAI')+
- paragraph('Haz el examen del INAP, corrígelo con su plantilla definitiva y registra aquí el resultado. La app guarda lo que indiques.')+
- '<p><a href="'+officialPage+'" target="_blank" rel="noopener">Cuestionarios y plantillas del INAP</a></p>'+
- paragraph(officialPasses()+' de 2 simulacros válidos para desbloquear el nivel 10.')+
- '<form id="official-form"><label>Convocatoria<select name="exam">'+officialExams.map(exam=>'<option>'+escapeHtml(exam)+'</option>').join('')+'</select></label>'+
- '<label>Fallos<input name="misses" type="number" min="0" max="100" required></label>'+
- '<label>Aprobado según la corrección oficial<select name="passed"><option value="no">No</option><option value="yes">Sí</option></select></label>'+
- '<button class="primary">Guardar resultado</button></form>');
+ render(back+heading('Simulacros oficiales de TAI')+
+ paragraph('Responde en la app consultando el cuadernillo original. Al entregar, se corrige automáticamente con la plantilla definitiva.')+
+ officialExams.map((exam,i)=>button(exam.title,'chooseOfficial('+i+')')).join(''));
+}
+function chooseOfficial(index){
+ const exam=officialExams[index];
+ render(button('Volver a simulacros','officialMenu()')+heading(exam.title)+
+ paragraph('Elige el supuesto práctico para hacer el examen completo.')+
+ officialLabels.slice(1).map((label,i)=>button(label,'startOfficial('+index+','+(i+1)+')',true)).join(''));
+}
+function officialQuestions(exam,part){
+ const offset=[0,85,110][part], count=part===0?80:20;
+ const answers=exam.answers.slice(offset,offset+count);
+ const normal=[...answers].map((right,i)=>({label:'Pregunta '+(i+1),right}));
+ const reserves=[...exam.answers.slice(offset+count,offset+count+5)].map((right,i)=>({label:'Reserva '+(i+1),right})).filter(q=>q.right!=='-');
+ return normal.filter(q=>q.right!=='-').concat(reserves.slice(0,normal.filter(q=>q.right==='-').length));
+}
+function startOfficial(index,part){
+ const exam=officialExams[index];
+ const groups=[0,part].map(id=>({id,questions:officialQuestions(exam,id)}));
+ const options='<option value="">En blanco</option>'+[...'ABCD'].map(letter=>'<option>'+letter+'</option>').join('');
+ render(button('Salir del simulacro',"if(confirm('¿Salir de este simulacro?'))officialMenu()")+
+ heading(exam.title)+'<p><a href="'+exam.paper+'" target="_blank" rel="noopener">Abrir cuadernillo oficial en otra pestaña</a></p>'+
+ '<details class="panel"><summary>Ver cuadernillo aquí</summary><iframe class="official-pdf" title="Cuadernillo oficial" src="'+exam.paper+'" loading="lazy"></iframe></details>'+
+ '<form id="official-form">'+groups.map(({id,questions})=>'<details class="panel" '+(id===0?'open':'')+'><summary>'+officialLabels[id]+'</summary><div class="official-answers">'+
+ questions.map((q,i)=>'<label>'+q.label+'<select name="answer-'+id+'-'+i+'">'+options+'</select></label>').join('')+'</div></details>').join('')+'<button class="primary">Entregar simulacro</button></form>');
  document.getElementById('official-form').addEventListener('submit',event=>{
   event.preventDefault();
-  const {exam,misses,passed}=event.currentTarget.elements;
-  const count=misses.valueAsNumber;
-  if(!officialExams.includes(exam.value)||!Number.isInteger(count)||count<0||count>100)return;
-  history.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),mode:'official',exam:exam.value,approved:passed.value==='yes',misses:count,hits:0,blanks:0,results:[]});
+  const data=new FormData(event.currentTarget);
+  const scores=groups.map(({id,questions})=>{
+   const results=questions.map((q,i)=>({...q,answer:data.get('answer-'+id+'-'+i)||null}));
+   const hits=results.filter(q=>q.answer===q.right).length;
+   const misses=results.filter(q=>q.answer&&q.answer!==q.right).length;
+   return {id,results,hits,misses,blanks:results.length-hits-misses};
+  });
+  const total=field=>scores.reduce((sum,score)=>sum+score[field],0);
+  history.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),mode:'official',exam:exam.title,hits:total('hits'),misses:total('misses'),blanks:total('blanks'),results:[]});
   saveStored('',history);
-  officialMenu();
+  render(button('Volver a simulacros','officialMenu()')+heading('Resultado del simulacro')+paragraph(exam.title)+
+   scores.map(score=>details(officialLabels[score.id]+' · '+score.hits+' aciertos · '+score.misses+' fallos · '+score.blanks+' en blanco',
+    paragraph((score.hits-score.misses/3).toLocaleString('es-ES',{maximumFractionDigits:2})+' puntos sobre '+score.results.length+' (cada fallo resta ⅓)')+
+    score.results.map(q=>paragraph(q.label+' · Tu respuesta: '+(q.answer??'En blanco')+' · Correcta: '+q.right)).join(''))).join('')+
+   '<p><a href="'+exam.key+'" target="_blank" rel="noopener">Consultar la plantilla definitiva del INAP</a></p>');
  });
 }
 const trapData=[
@@ -1471,7 +1546,7 @@ function hintFor(q){
  return 'Fíjate en el vocabulario exacto de la pregunta. La respuesta empieza por «'+q.right.slice(0,1)+'».';
 }
 function begin(items){
- section=['game','written','trap','battle','daily'].includes(mode)?'game':mode==='review'?'review':'test';
+ section=['game','written','trap','battle'].includes(mode)?mode:mode==='daily'?'game':mode==='review'?'review':'test';
  test=items.map(q=>({...q,options:shuffle(q.steps??[q.right,...(q.wrong??[])])}));
  answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];trapFound=false;hintShown=false;trapFeedback='';
  question();
@@ -1491,7 +1566,7 @@ function question(){
   return '<button class="'+(checked&&option===selected?answerStatus(selected,q.right):'')+'" aria-pressed="'+(option===selected||position>=0)+'" '+(checked||position>=0?'disabled':'')+' onclick="selectAnswer('+i+')">'+(position>=0?(position+1)+'. ':'')+escapeHtml(option)+'</button>';
  }).join('');
  render(button('Salir del intento',"if(confirm('¿Salir de este intento?'))home()")+
- (game?guide(mode==='written'?'Elige la palabra o el número que falta.':order?'Toca las opciones en el orden correcto.':mode==='final'?'La puerta final mezcla los siete bloques.':'Resuelve el reto para avanzar hacia la puerta.'):'')+
+ (game?guide(mode==='written'?'Elige la palabra o el número que falta.':order?'Toca las opciones en el orden correcto.':mode==='final'?'El reto final mezcla los siete bloques.':'Resuelve el reto y comprueba tu respuesta.'):'')+
  '<small>'+escapeHtml(formatBlock(q.block??selectedBlock))+' · '+(cursor+1)+' de '+test.length+'</small>'+
  '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+escapeHtml(q.prompt)+'</h2>'+
  (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+trapSentence+(revealOptions?options:'')+
@@ -1533,14 +1608,14 @@ function move(delta){
  sequence=test[cursor].steps&&answers[cursor]!==null?answers[cursor].split(' → '):[];
  question();
 }
-const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',game:'Juego',written:'Rellenar huecos',matching:'Une las frases',daily:'Repaso de hoy',trap:'Detecta la trampa',battle:'Batalla de conceptos',official:'Simulacro oficial',review:'Repaso'};
+const modeNames={easy:'Fácil',normal:'Normal',hard:'Difícil',ascenso:'Ascenso',final:'Reto final',global:'Test global',game:'Reto rápido',written:'Rellenar huecos',matching:'Une las frases',daily:'Repaso de hoy',trap:'Detecta la trampa',battle:'Batalla de conceptos',official:'Simulacro oficial',review:'Repaso'};
 function finish(){
  const results=test.map((q,i)=>({id:q.id,block:q.block,prompt:q.trap?q.prompt+' '+q.trap:q.prompt,right:q.right,note:q.note,answer:answers[i]}));
  const hits=results.filter(q=>q.answer===q.right).length;
  const blanks=answers.filter(a=>a===null).length;
  const misses=test.length-hits-blanks;
  const before=levelNumber(), doorBefore=hasAscended(selectedBlock);
- const comparable=history.find(item=>item.mode===mode&&(mode==='final'||(item.block??0)===selectedBlock)&&item.results.length===results.length);
+ const comparable=history.find(item=>item.mode===mode&&(mode==='final'||mode==='global'||(item.block??0)===selectedBlock)&&item.results.length===results.length);
  const improvement=comparable&&misses<comparable.misses&&hits>=comparable.hits;
  const alias=account?.displayName;
  const praise=improvement
@@ -1559,7 +1634,8 @@ function finish(){
  const celebrate=mode==='ascenso'&&hits>=18&&misses<3;
  render(topicBack+heading('Resultado · '+modeNames[mode])+'<div class="score">'+(10*hits/test.length).toLocaleString('es-ES',{maximumFractionDigits:2})+'/10</div>'+
  paragraph(hits+' aciertos · '+misses+' fallos · '+blanks+' en blanco')+
- (opened?guide('¡Puerta abierta'+(alias?', '+alias:'')+'!'):'')+
+ (opened?guide('¡Examen de ascenso superado'+(alias?', '+alias:'')+'!'):'')+
+ (mode==='global'?paragraph(misses+blanks<3?'Test global superado. Tema 2 desbloqueado · Próximamente.':'Para superarlo necesitas acertar al menos 18 de 20.')+button('Repetir Test global','startGlobal()',true):'')+
  (ascended?paragraph('✨ Has subido al nivel '+levelNumber()+'.'):'')+
  (celebrate?parrotCelebration(selectedBlock,alias):'')+
  (praise?'<div class="panel achievement">'+paragraph(praise)+'</div>':'')+
@@ -1580,7 +1656,7 @@ function progressPage(){
   const available=questionsFor(i);
   const covered=available.filter(q=>seen.has(q.id)||seen.has(q.id+'-art')).length;
   return '<div class="panel"><strong>'+escapeHtml(name)+'</strong>'+paragraph(covered+' de '+available.length+' fichas de contenido practicadas · '+(hasAscended(i)?'Puerta abierta':'Ascenso pendiente'))+'</div>';
- }).join('')+'<h2>Historial</h2>'+history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(modeNames[item.mode]??item.mode)+' · '+(item.mode==='official'?escapeHtml(item.exam)+(item.approved?' · Aprobado':' · No aprobado'):item.hits+'/'+item.results.length)+'</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join('')+
+ }).join('')+'<h2>Historial</h2>'+history.map(item=>'<div class="panel"><strong>'+new Date(item.date).toLocaleDateString('es-ES')+' · '+(modeNames[item.mode]??item.mode)+' · '+(item.mode==='official'?escapeHtml(item.exam)+(typeof item.approved==='boolean'?(item.approved?' · Aprobado':' · No aprobado'):' · '+item.hits+' aciertos'):item.hits+'/'+item.results.length)+'</strong><small>'+item.misses+' fallos · '+item.blanks+' en blanco</small></div>').join('')+
  '<small>'+ (account?'El progreso de tu cuenta se sincroniza con Firebase.':'El progreso de invitado se guarda en este navegador.') +'</small>');
 }
 function pendingMistakes(){
