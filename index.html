@@ -93,6 +93,17 @@ main[data-section] .activity-list .menu-row[class*="activity-"]{background:var(-
 main .simulator-rows .menu-row{margin:0;border:0;border-radius:0}
 main .simulator-rows .menu-row+.menu-row{border-top:1px solid #e1ebf8}
 main[data-section] .page-back{width:auto;padding:6px 10px;margin:0 0 8px}
+.nav-book,.nav-chart{display:inline-flex;height:1.2em;align-items:flex-end;justify-content:center;color:currentColor}
+.nav-book::before,.nav-book::after{content:"";width:8px;height:12px;border:2px solid currentColor;margin-bottom:3px}
+.nav-book::before{border-radius:3px 1px 1px 3px;border-right-width:1px;transform:skewY(8deg)}
+.nav-book::after{border-radius:1px 3px 3px 1px;border-left-width:1px;transform:skewY(-8deg)}
+.nav-chart{gap:3px;padding:0 2px 3px;border-bottom:2px solid currentColor}
+.nav-chart i{width:3px;height:6px;background:currentColor;border-radius:1px}
+.nav-chart i:nth-child(2){height:10px}
+.nav-chart i:nth-child(3){height:14px}
+.hint-area{margin-top:24px;padding:12px 4px 4px;border-top:1px solid var(--section-line,#c8dbef)}
+.hint-area summary{width:fit-content;padding:6px 4px;cursor:pointer;font-size:.9rem;font-weight:700}
+.hint-area p{margin:6px 4px}
 </style>
 <header><strong class="brand"><img src="./clave-169-icon.png" width="36" height="36" alt="">CLAVE 169</strong><span class="tag" id="level"></span></header>
 <main id="view"></main>
@@ -1148,7 +1159,7 @@ function levelNumber(){
 }
 let section='';
 const navItems=[
- ['Inicio','⌂'],['Estudiar','▤'],['Tests','☑'],['Progreso','▥']
+ ['Inicio','⌂'],['Estudiar','<span class="nav-book"></span>'],['Tests','☑'],['Progreso','<span class="nav-chart"><i></i><i></i><i></i></span>']
 ];
 let lastBlock=readStored('-ultimo-bloque',null);
 function rememberBlock(block){
@@ -1545,13 +1556,13 @@ function startOfficial(index,part){
  });
 }
 const trapData=[
- ['La soberanía nacional reside en el Gobierno.','Gobierno','pueblo español',['Senado','Tribunal Constitucional'],'Piensa en quién es titular de la soberanía, no en quién gobierna.'],
- ['Los españoles son mayores de edad a los 21 años.','21','18',['16','20'],'Es la edad habitual para votar por primera vez.'],
- ['La enseñanza básica es obligatoria y de pago.','de pago','gratuita',['voluntaria','selectiva'],'Piensa en si la Constitución exige pagar por cursarla.'],
- ['Los convenios colectivos tienen fuerza orientativa.','orientativa','vinculante',['consultiva','provisional'],'La palabra indica que el convenio obliga.'],
- ['El artículo 47 busca fomentar la especulación con el suelo.','fomentar','impedir',['autorizar','premiar'],'La norma intenta evitar la especulación.'],
- ['El estado de sitio requiere mayoría simple del Congreso.','simple','absoluta',['de dos tercios','de tres quintos'],'La mayoría exigida se calcula sobre todos los miembros.'],
- ['El Rey es el jefe del Gobierno.','Gobierno','Estado',['Congreso','Senado'],'Piensa en qué institución representa al conjunto de España.']
+ ['La soberanía nacional reside en el Gobierno.','Gobierno','pueblo español',['Senado','Tribunal Constitucional'],'Distingue el origen del poder de la institución que lo ejerce.'],
+ ['Los españoles son mayores de edad a los 21 años.','21','18',['16','20'],'Piensa en el umbral general de edad frente a los requisitos de actividades concretas.'],
+ ['La enseñanza básica es obligatoria y de pago.','de pago','gratuita',['voluntaria','selectiva'],'Separa las condiciones de acceso de la obligación de cursar esa etapa.'],
+ ['Los convenios colectivos tienen fuerza orientativa.','orientativa','vinculante',['consultiva','provisional'],'Fíjate en el efecto jurídico de lo pactado entre las partes.'],
+ ['El artículo 47 busca fomentar la especulación con el suelo.','fomentar','impedir',['autorizar','premiar'],'Piensa en cómo relaciona este artículo el uso del suelo con el interés general.'],
+ ['El estado de sitio requiere mayoría simple del Congreso.','simple','absoluta',['de dos tercios','de tres quintos'],'Distingue entre el órgano que decide y la regla que sigue para votar.'],
+ ['El Rey es el jefe del Gobierno.','Gobierno','Estado',['Congreso','Senado'],'Distingue las funciones de representación de las de dirección política.']
 ];
 const battleData=[
  ['¿Qué pasó cuando el pueblo votó el texto constitucional?','Ratificación','Aprobación','Las Cortes aprobaron el texto y el pueblo lo ratificó en referéndum.'],
@@ -1603,8 +1614,7 @@ function parrotCelebration(block,alias){
  return '<section class="panel achievement parrot-party" role="status"><img src="'+parrotImage+'" alt="Loro gris africano bailando" width="92" height="92"><div>'+
  paragraph('🎉 ¡Enhorabuena'+(alias?', '+alias:'')+'!')+paragraph(parrotLines[block])+'</div></section>';
 }
-let trapFound=false,hintShown=false,trapFeedback='';
-function showHint(){if(practiceModes.includes(mode)&&!checked){hintShown=true;question();}}
+let trapFound=false,trapFeedback='';
 function trapTokens(q){
  const at=q.trap.indexOf(q.trapWord);
  return [...q.trap.slice(0,at).trim().split(/\s+/).filter(Boolean),q.trapWord,...q.trap.slice(at+q.trapWord.length).trim().split(/\s+/).filter(Boolean)];
@@ -1617,15 +1627,20 @@ function findTrap(index){
 }
 function hintFor(q){
  if(q.hint)return q.hint;
- if(q.steps)return 'Empieza con: '+q.steps[0]+'.';
- if(q.ref)return 'Busca la regla en el artículo '+q.ref+'. Empieza por identificar a quién o a qué se aplica.';
- if(mode==='written')return 'La respuesta empieza por «'+q.right.slice(0,1)+'».';
- return 'Fíjate en el vocabulario exacto de la pregunta. La respuesta empieza por «'+q.right.slice(0,1)+'».';
+ if(q.steps){
+  return q.steps.every(step=>/\d{4}/.test(step))
+   ?'Ordena primero por año y después por mes y día.'
+   :'Compara dos elementos de la lista cada vez y ordénalos por número de artículo.';
+ }
+ if(mode==='written')return 'Lee la frase completa y fíjate en qué función cumple el hueco dentro de la regla.';
+ if(q.id.endsWith('-art'))return 'Ubica primero la regla en el título o capítulo que estudiaste.';
+ if(q.ref)return 'Identifica a quién se aplica la regla y compara las condiciones de cada opción.';
+ return 'Identifica qué tipo de dato te piden y compara las palabras que cambian entre las opciones.';
 }
 function begin(items){
  section=['game','written','trap','battle'].includes(mode)?mode:mode==='daily'?'game':mode==='review'?'review':'test';
  test=items.map(q=>({...q,options:shuffle(q.steps??[q.right,...(q.wrong??[])])}));
- answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];trapFound=false;hintShown=false;trapFeedback='';
+ answers=Array(test.length).fill(null);cursor=0;checked=false;sequence=[];trapFound=false;trapFeedback='';
  question();
 }
 function answerStatus(answer,right){return answer===null?'':answer===right?'correct':'incorrect';}
@@ -1647,15 +1662,14 @@ function question(){
  '<small>'+escapeHtml(formatBlock(q.block??selectedBlock))+' · '+(cursor+1)+' de '+test.length+'</small>'+
  '<progress value="'+(cursor+1)+'" max="'+test.length+'" aria-label="Progreso"></progress><h2>'+escapeHtml(q.prompt)+'</h2>'+
  (order?paragraph(sequence.length?sequence.join(' → '):'Elige el primer elemento.'):'')+trapSentence+(revealOptions?options:'')+
- (!checked&&practiceModes.includes(mode)?button('💡 Pista de la Llave','showHint()'): '')+
- (hintShown&&!checked?guide(hintFor(q)):'')+
  (q.retry?'<small>🔁 Segunda oportunidad</small>':'')+
  (checked?'<div class="panel feedback '+answerStatus(selected,q.right)+'" role="status"><strong>'+escapeHtml(selected===q.right?'¡Correcto!':'Respuesta correcta · '+q.right)+'</strong>'+paragraph(q.note)+'</div>':'')+
  (!checked&&(sequence.length||(!instant&&selected!==null))?button(order?'Reiniciar orden':'Quitar respuesta','clearAnswer()'):'')+
  (instant&&!checked&&selected!==null?button('Comprobar','check()',true):'')+
  (instant&&!checked?button('Dejar en blanco','skip()'):'')+
  (!instant&&cursor>0?button('Anterior','move(-1)'):'')+
- (!instant||checked?button(cursor===test.length-1?'Entregar':'Siguiente','move(1)',true):''));
+ (!instant||checked?button(cursor===test.length-1?'Entregar':'Siguiente','move(1)',true):'')+
+ (!checked&&practiceModes.includes(mode)?'<details class="hint-area"><summary>Pista de la Llave</summary>'+paragraph(hintFor(q))+'</details>':''));
 }
 function selectAnswer(i){
  const q=test[cursor];
@@ -1681,7 +1695,7 @@ function check(){
 function skip(){answers[cursor]=null;sequence=[];check();}
 function move(delta){
  if(cursor+delta===test.length){finish();return;}
- cursor+=delta;checked=false;trapFound=false;hintShown=false;trapFeedback='';
+ cursor+=delta;checked=false;trapFound=false;trapFeedback='';
  sequence=test[cursor].steps&&answers[cursor]!==null?answers[cursor].split(' → '):[];
  question();
 }
